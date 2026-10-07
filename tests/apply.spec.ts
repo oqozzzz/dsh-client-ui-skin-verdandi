@@ -248,3 +248,87 @@ describe('verdandi skin apply/dispose contract', () => {
     expect(document.querySelector('[data-pane="conversation"]')?.hasAttribute('data-verdandi-view')).toBe(false)
   })
 })
+
+/**
+ * Shells from dsh 0.2: `data-pane` is gone and the panes are `display: contents`
+ * slot wrappers, so the skin must walk down to the first real box and tag that.
+ * The wrapper nesting mirrors the 0.2.0-rc.2 runtime capture.
+ */
+const DSH02_SHELL = `
+  <div id="root">
+    <div data-slot="sidebar" style="display: contents"><div class="host_sidebar_root">
+      <button aria-label="新建会话"></button>
+      <button class="host_newSession">新会话 Ctrl+N</button>
+      <button>插件</button>
+      <button>自动化任务</button>
+      <button aria-label="搜索会话"></button>
+      <div data-slot="sidebar.settings"><button>设置</button></div>
+    </div></div>
+    <div data-slot="main"><div data-slot="main.conversation" style="display: contents"><div class="host_conversation_root">
+      <div data-slot="conversation.header" style="display: contents"><header>
+        <div data-slot="conversation.session.header" style="display: contents">
+          <div class="host_titleRow">
+            <button role="tab" aria-selected="true">对话</button>
+            <button role="tab" aria-selected="false">轨迹</button>
+          </div>
+        </div>
+      </header></div>
+      <div data-phase="active"></div>
+      <div data-chat-flow-kind="assistant-step"><div data-slot="conversation.chat.node">
+        <div class="host_markdown_body"><p>Assistant response</p></div>
+      </div></div>
+      <div data-composer-seat><div data-composer-card></div></div>
+    </div></div></div>
+    <div data-slot="rightbar" style="display: contents"><div class="host_rightbar_session" style="display: contents"><div data-slot="rightbar.session" style="display: contents"><div class="host_rightbar_panel">空面板</div></div></div></div>
+  </div>`
+
+describe('verdandi skin on the dsh 0.2 shell', () => {
+  let ctx: MockContext
+  beforeEach(() => {
+    document.body.innerHTML = DSH02_SHELL
+    ctx = new MockContext()
+  })
+  afterEach(() => {
+    ctx.disposeAll()
+  })
+
+  it('tags the real pane boxes through the display: contents wrappers', () => {
+    apply(ctx as never)
+
+    expect(document.querySelector('[data-verdandi-pane="sidebar"]')?.className).toBe('host_sidebar_root')
+    expect(document.querySelector('[data-verdandi-pane="conversation"]')?.className).toBe('host_conversation_root')
+    expect(document.querySelector('[data-verdandi-pane="details"]')?.className).toBe('host_rightbar_panel')
+    // No wrapper ever carries the tag: CSS positioning needs a real box.
+    for (const wrapper of document.querySelectorAll('[data-slot]')) {
+      expect(wrapper.hasAttribute('data-verdandi-pane')).toBe(false)
+    }
+
+    ctx.disposeAll()
+    expect(document.querySelector('[data-verdandi-pane]')).toBeNull()
+  })
+
+  it('mounts stage and decorations on the 0.2 boxes and marks the 0.2 nav', () => {
+    apply(ctx as never)
+
+    const conversation = document.querySelector('[data-verdandi-pane="conversation"]')
+    const sidebar = document.querySelector('[data-verdandi-pane="sidebar"]')
+    expect(conversation?.querySelector(':scope > [data-verdandi-stage]')).not.toBeNull()
+    expect(conversation?.getAttribute('data-verdandi-phase')).toBe('active')
+    expect(sidebar?.querySelector(":scope > [data-verdandi-decoration='sidebar-portrait']")).not.toBeNull()
+    expect(sidebar?.querySelector(":scope > [data-verdandi-decoration='sidebar-sacred-tree']")).not.toBeNull()
+    expect(sidebar?.querySelector(":scope > [data-verdandi-decoration='sidebar-veil-corners-top']")).not.toBeNull()
+    expect(conversation?.querySelector(":scope > [data-verdandi-decoration='workspace-lace']")).not.toBeNull()
+    expect(conversation?.querySelector("header > [data-verdandi-decoration='header-veil']")).not.toBeNull()
+    expect(document.querySelector("[data-composer-card] > [data-verdandi-decoration='composer-seal']")).not.toBeNull()
+    // 0.2 renamed the nav entries; both the class-suffix and text hooks resolve.
+    expect(Array.from(document.querySelectorAll('button[data-verdandi-nav-entry]')).map((button) => button.textContent)).toEqual([
+      '插件',
+      '自动化任务',
+    ])
+    expect(document.querySelector('button[data-verdandi-new-session]')?.className).toContain('host_newSession')
+    expect(document.querySelector('button[data-verdandi-sidebar-action]')?.getAttribute('aria-label')).toBe('搜索会话')
+    expect(document.querySelector('[data-verdandi-header]')).not.toBeNull()
+    // The 0.2 empty-details copy matches the widened empty-state probe.
+    expect(document.querySelector("[data-verdandi-pane='details']")?.getAttribute('data-verdandi-details-empty')).toBe('')
+  })
+})

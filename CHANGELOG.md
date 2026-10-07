@@ -9,6 +9,30 @@ A version exists only when all four agree: the git tag `vX.Y.Z`, the `version` i
 enforces the first two on every tag push; the checklist in `RELEASING.md` covers
 the rest.
 
+## [Unreleased]
+
+### Added
+
+- Support for the DSH `0.2.0-rc.2` desktop shell. 0.2 replaced the `data-pane`
+  pane attributes with `display: contents` slot wrappers (`sidebar` /
+  `main.conversation` / `rightbar`), so the runtime now probes both shell
+  generations and tags the resolved real boxes with a skin-owned
+  `data-verdandi-pane` attribute; every pane rule in the stylesheet targets
+  that attribute, so one rule set addresses 0.1.x and 0.2 alike.
+- Windows desktop title-bar avoidance: the top corner ornaments stop poking
+  into the 40 DIP caption band while `html[data-windows-titlebar]` is present
+  (the web shell never carries it and keeps the intended overhang).
+- 0.2 sidebar nav entries (插件 / 自动化任务) are tagged like their 0.1
+  counterparts, and the details-empty probe also matches the 0.2 copy
+  (空面板 / 请先选择会话).
+
+### Fixed
+
+- The settings-dialog token re-establishment now also addresses 0.2, which
+  portals modal dialogs to a body-level overlay instead of the sidebar
+  subtree; the sidebar clipping release stays 0.1-only, where the dialog
+  still renders inline.
+
 ## [0.1.5] - 2026-09-26
 
 ### Fixed

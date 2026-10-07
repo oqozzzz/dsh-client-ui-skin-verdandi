@@ -65,6 +65,20 @@ const HEADER_SELECTORS = [
   "[data-slot='conversation.session.header'] > header",
   "[data-slot='conversation.session.header']:has(> header)",
 ] as const
+/**
+ * Pane anchors, in probe order. dsh 0.1.x marks each pane with `data-pane`;
+ * 0.2 dropped that attribute and renders panes as `display: contents` slot
+ * wrappers (`sidebar` / `main.conversation` / `rightbar`), so the probe walks
+ * down to the first real box before the skin tags it with `data-verdandi-pane`.
+ * Verified live on 0.2.0-rc.2: the wrappers generate no box, and every pane
+ * rule in the stylesheet targets the tagged box.
+ */
+const PANE_ATTR = 'data-verdandi-pane'
+const PANE_SELECTORS = {
+  sidebar: ["[data-pane='sidebar']", "[data-slot='sidebar']"],
+  conversation: ["[data-pane='conversation']", "[data-slot='main.conversation']", "[data-slot='main']"],
+  details: ["[data-pane='details']", "[data-slot='rightbar']"],
+} as const
 const STAGE_SELECTOR = '[data-verdandi-stage]'
 const DECORATION_SELECTOR = '[data-verdandi-decoration]'
 const LEGACY_SELECTOR = '[data-verdandi-sidebar-card], [data-verdandi-wedding], [data-verdandi-chrome]'
@@ -74,6 +88,7 @@ const OWNED_HOOKS = [
   'data-verdandi-new-session',
   'data-verdandi-nav-entry',
   'data-verdandi-sidebar-action',
+  PANE_ATTR,
   RUNNING_ATTR,
   DETAILS_EMPTY_ATTR,
 ] as const
@@ -150,6 +165,59 @@ function headerElement(root: ParentNode | null): HTMLElement | null {
     if (header) return header
   }
   return null
+}
+
+/**
+ * Resolve a pane's real box for `name`, or null while the shell shows neither
+ * generation's anchor. The 0.2 wrapper is `display: contents`, so the walk
+ * descends to the first element that actually generates a box; 0.1 panes are
+ * real boxes and come back unchanged. jsdom computes `block` for unstyled
+ * divs, so the walk is a no-op in the tests' 0.1-shaped fixtures.
+ */
+function paneElement(name: keyof typeof PANE_SELECTORS): HTMLElement | null {
+  for (const selector of PANE_SELECTORS[name]) {
+    const wrapper = document.querySelector<HTMLElement>(selector)
+    if (!wrapper) continue
+    let box = wrapper
+    for (let depth = 0; depth < 4; depth += 1) {
+      const display = typeof window !== 'undefined' && typeof window.getComputedStyle === 'function'
+        ? window.getComputedStyle(box).display
+        : ''
+      if (display !== 'contents') break
+      const next = box.firstElementChild
+      if (!(next instanceof HTMLElement)) break
+      box = next
+    }
+    return box
+  }
+  return null
+}
+
+/**
+ * Tag the resolved pane boxes with `data-verdandi-pane`. The stylesheet is
+ * generated against these skin-owned attributes, so one rule set addresses
+ * both shell generations and dispose only ever removes skin attributes.
+ */
+function decoratePanes(): {
+  sidebar: HTMLElement | null
+  conversation: HTMLElement | null
+  details: HTMLElement | null
+} {
+  const sidebar = paneElement('sidebar')
+  const conversation = paneElement('conversation')
+  const details = paneElement('details')
+  const resolved: Array<[HTMLElement | null, string]> = [
+    [sidebar, 'sidebar'],
+    [conversation, 'conversation'],
+    [details, 'details'],
+  ]
+  for (const tagged of document.querySelectorAll<HTMLElement>(`[${PANE_ATTR}]`)) {
+    tagged.removeAttribute(PANE_ATTR)
+  }
+  for (const [box, name] of resolved) {
+    if (box) box.setAttribute(PANE_ATTR, name)
+  }
+  return { sidebar, conversation, details }
 }
 
 function isRendered(element: HTMLElement | null): element is HTMLElement {
@@ -301,13 +369,14 @@ function decorateStableRegions(): void {
   const header = headerElement(document)
   header?.setAttribute('data-verdandi-header', '')
 
-  const details = firstElement<HTMLElement>("[data-pane='details']")
+  const panes = decoratePanes()
+  const details = panes.details
   const detailsText = (details?.textContent ?? '').replace(/\s+/g, ' ').trim()
-  if (/点击消息流中的工具行查看详情|select.+tool.+row.+details/i.test(detailsText)) {
+  if (/点击消息流中的工具行查看详情|select.+tool.+row.+details|空面板|请先选择会话/i.test(detailsText)) {
     details?.setAttribute(DETAILS_EMPTY_ATTR, '')
   }
 
-  const sidebar = firstElement<HTMLElement>("[data-pane='sidebar']")
+  const sidebar = panes.sidebar
   if (!sidebar) return
 
   for (const button of sidebar.querySelectorAll<HTMLButtonElement>('button')) {
@@ -317,10 +386,14 @@ function decorateStableRegions(): void {
     // dsh 0.1.7 wraps the label in `newSessionLabel` / `newSessionContent` and
     // appends a shortcut hint, so the button text is no longer the bare label.
     // Match the stable class suffix first and keep the text rule for older shells.
+    // 0.2 renames the nav entries (插件 / 自动化任务 replace 任务看板 / SSH / 技能中心);
+    // both sets stay tagged so the crimson nav treatment addresses either shell.
     if (/newSession/i.test(button.className) || /^(新会话|New session)$/i.test(text)) {
       button.dataset.verdandiNewSession = ''
     }
-    if (/^(任务看板|Task board|SSH|技能中心|Skill center)$/i.test(text)) button.dataset.verdandiNavEntry = ''
+    if (/^(任务看板|Task board|SSH|技能中心|Skill center|插件|Plugins|自动化任务|Automations|Automated tasks)$/i.test(text)) {
+      button.dataset.verdandiNavEntry = ''
+    }
     if (/搜索会话|Search sessions|视图选项|View options|添加工作区|Add workspace/i.test(label)) {
       button.dataset.verdandiSidebarAction = ''
     }
@@ -452,9 +525,11 @@ export function apply(ctx: Context): void {
     removeLegacyNodes()
     decorateStableRegions()
 
-    const sidebar = firstElement<HTMLElement>("[data-pane='sidebar']")
-    const conversation = firstElement<HTMLElement>("[data-pane='conversation']")
-    const details = firstElement<HTMLElement>("[data-pane='details']")
+    // decorateStableRegions has just tagged the resolved pane boxes, so the
+    // skin-owned attribute addresses either shell generation from here on.
+    const sidebar = firstElement<HTMLElement>("[data-verdandi-pane='sidebar']")
+    const conversation = firstElement<HTMLElement>("[data-verdandi-pane='conversation']")
+    const details = firstElement<HTMLElement>("[data-verdandi-pane='details']")
     const workspaceVisible = isRendered(conversation)
 
     body.toggleAttribute(WORKSPACE_ATTR, workspaceVisible)
@@ -474,7 +549,7 @@ export function apply(ctx: Context): void {
       setStageWidth(stage, conversation)
     } else {
       for (const stage of document.querySelectorAll<HTMLElement>(STAGE_SELECTOR)) stage.remove()
-      for (const pane of document.querySelectorAll<HTMLElement>("[data-pane='conversation']")) {
+      for (const pane of document.querySelectorAll<HTMLElement>("[data-verdandi-pane='conversation']")) {
         pane.removeAttribute(CONVERSATION_PHASE_ATTR)
         pane.removeAttribute(CONVERSATION_VIEW_ATTR)
       }
@@ -513,15 +588,20 @@ export function apply(ctx: Context): void {
     window.removeEventListener('resize', scheduleSync)
     window.visualViewport?.removeEventListener('resize', scheduleSync)
 
-    clearOwnedHooks()
-    for (const decoration of document.querySelectorAll<HTMLElement>(DECORATION_SELECTOR)) decoration.remove()
-    for (const slip of document.querySelectorAll<HTMLElement>(`[${SLIP_ATTR}]`)) slip.removeAttribute(SLIP_ATTR)
-    for (const stage of document.querySelectorAll<HTMLElement>(STAGE_SELECTOR)) stage.remove()
-    for (const conversation of document.querySelectorAll<HTMLElement>("[data-pane='conversation']")) {
+    // Pane-owned inline state goes first: the loop keys on the skin attribute
+    // and clearOwnedHooks below strips it.
+    for (const conversation of document.querySelectorAll<HTMLElement>(
+      "[data-verdandi-pane='conversation']",
+    )) {
       for (const property of layoutProperties) conversation.style.removeProperty(property)
       conversation.removeAttribute(CONVERSATION_PHASE_ATTR)
       conversation.removeAttribute(CONVERSATION_VIEW_ATTR)
     }
+
+    clearOwnedHooks()
+    for (const decoration of document.querySelectorAll<HTMLElement>(DECORATION_SELECTOR)) decoration.remove()
+    for (const slip of document.querySelectorAll<HTMLElement>(`[${SLIP_ATTR}]`)) slip.removeAttribute(SLIP_ATTR)
+    for (const stage of document.querySelectorAll<HTMLElement>(STAGE_SELECTOR)) stage.remove()
 
     for (const [property, previous] of previousAssetProperties) {
       if (previous.value) body.style.setProperty(property, previous.value, previous.priority)

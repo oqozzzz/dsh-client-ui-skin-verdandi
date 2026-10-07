@@ -79,6 +79,29 @@ const PANE_SELECTORS = {
   conversation: ["[data-pane='conversation']", "[data-slot='main.conversation']", "[data-slot='main']"],
   details: ["[data-pane='details']", "[data-slot='rightbar']"],
 } as const
+/**
+ * Proof that a resolved conversation box really is the chat workspace. dsh 0.2
+ * swaps other panels (the plugin manager page, for one) into the same `main`
+ * slot the chat lives in, so the descent can land on a panel that is not the
+ * transcript; painting the chat surface's overflow clip onto those panels
+ * breaks them. Any of these anchors — the phase marker both the chat and the
+ * new-session hero carry — proves the box is the chat surface.
+ */
+const CHAT_ANCHOR_SELECTOR = [
+  '[data-phase]',
+  '[data-composer-seat]',
+  "[data-slot='conversation.header']",
+  "[data-slot='conversation.session.header']",
+  '[data-chat-flow-kind]',
+].join(', ')
+/**
+ * 0.2 tenants of the `main` slot that are not the transcript (the plugin
+ * manager page, the automations page) still get the skinned backdrop — the
+ * scenic background and the ink tokens — through this attribute. They never
+ * get the chat surface's overflow clip, positioning or stage, so host
+ * scrolling inside them stays native.
+ */
+const PANEL_ATTR = 'data-verdandi-panel'
 const STAGE_SELECTOR = '[data-verdandi-stage]'
 const DECORATION_SELECTOR = '[data-verdandi-decoration]'
 const LEGACY_SELECTOR = '[data-verdandi-sidebar-card], [data-verdandi-wedding], [data-verdandi-chrome]'
@@ -89,6 +112,7 @@ const OWNED_HOOKS = [
   'data-verdandi-nav-entry',
   'data-verdandi-sidebar-action',
   PANE_ATTR,
+  PANEL_ATTR,
   RUNNING_ATTR,
   DETAILS_EMPTY_ATTR,
 ] as const
@@ -194,6 +218,37 @@ function paneElement(name: keyof typeof PANE_SELECTORS): HTMLElement | null {
 }
 
 /**
+ * Resolve the conversation tenant of the 0.2 `main` slot (or the 0.1 pane).
+ * A box that carries the chat anchors is the transcript and gets the full
+ * conversation surface; a box without them is a swapped-in panel and gets
+ * only the skinned backdrop through `data-verdandi-panel`.
+ */
+function resolveConversationPane(): { chat: HTMLElement | null; panel: HTMLElement | null } {
+  for (const selector of PANE_SELECTORS.conversation) {
+    const wrapper = document.querySelector<HTMLElement>(selector)
+    if (!wrapper) continue
+    let box = wrapper
+    for (let depth = 0; depth < 4; depth += 1) {
+      const display = typeof window !== 'undefined' && typeof window.getComputedStyle === 'function'
+        ? window.getComputedStyle(box).display
+        : ''
+      if (display !== 'contents') break
+      const next = box.firstElementChild
+      if (!(next instanceof HTMLElement)) break
+      box = next
+    }
+    if (box.querySelector(CHAT_ANCHOR_SELECTOR)) return { chat: box, panel: null }
+    return { chat: null, panel: box }
+  }
+  return { chat: null, panel: null }
+}
+
+/** Attribute write that stays idle when the value already matches. */
+function setAttrIfChanged(element: Element, name: string, value: string): void {
+  if (element.getAttribute(name) !== value) element.setAttribute(name, value)
+}
+
+/**
  * Tag the resolved pane boxes with `data-verdandi-pane`. The stylesheet is
  * generated against these skin-owned attributes, so one rule set addresses
  * both shell generations and dispose only ever removes skin attributes.
@@ -204,18 +259,28 @@ function decoratePanes(): {
   details: HTMLElement | null
 } {
   const sidebar = paneElement('sidebar')
-  const conversation = paneElement('conversation')
+  const { chat: conversation, panel } = resolveConversationPane()
   const details = paneElement('details')
-  const resolved: Array<[HTMLElement | null, string]> = [
-    [sidebar, 'sidebar'],
-    [conversation, 'conversation'],
-    [details, 'details'],
-  ]
+  if (sidebar) setAttrIfChanged(sidebar, PANE_ATTR, 'sidebar')
+  if (conversation) setAttrIfChanged(conversation, PANE_ATTR, 'conversation')
+  if (details) setAttrIfChanged(details, PANE_ATTR, 'details')
+  if (panel) setAttrIfChanged(panel, PANEL_ATTR, '')
+  // Sweep tags that no longer resolve, and pane-scoped state left behind by a
+  // previous (possibly wrong) tag, without re-writing live ones: every idle
+  // write is a mutation record the host's own observers have to digest.
+  const currentPanes = new Set([sidebar, conversation, details])
   for (const tagged of document.querySelectorAll<HTMLElement>(`[${PANE_ATTR}]`)) {
-    tagged.removeAttribute(PANE_ATTR)
+    if (!currentPanes.has(tagged)) tagged.removeAttribute(PANE_ATTR)
   }
-  for (const [box, name] of resolved) {
-    if (box) box.setAttribute(PANE_ATTR, name)
+  for (const tagged of document.querySelectorAll<HTMLElement>(`[${PANEL_ATTR}]`)) {
+    if (tagged !== panel) tagged.removeAttribute(PANEL_ATTR)
+  }
+  for (const stale of document.querySelectorAll<HTMLElement>(`[${CONVERSATION_PHASE_ATTR}]`)) {
+    if (stale !== conversation) {
+      for (const property of layoutProperties) stale.style.removeProperty(property)
+      stale.removeAttribute(CONVERSATION_PHASE_ATTR)
+      stale.removeAttribute(CONVERSATION_VIEW_ATTR)
+    }
   }
   return { sidebar, conversation, details }
 }
@@ -363,22 +428,36 @@ function decorateLegibilityRows(conversation: HTMLElement | null): void {
   }
 }
 
-function decorateStableRegions(): void {
-  clearOwnedHooks()
+const NAV_MARK_ATTR = 'data-verdandi-nav-entry'
+const NEW_SESSION_MARK_ATTR = 'data-verdandi-new-session'
+const SIDEBAR_ACTION_ATTR = 'data-verdandi-sidebar-action'
 
+function decorateStableRegions(): void {
   const header = headerElement(document)
-  header?.setAttribute('data-verdandi-header', '')
+  if (header) setAttrIfChanged(header, 'data-verdandi-header', '')
+  for (const stale of document.querySelectorAll('[data-verdandi-header]')) {
+    if (stale !== header) stale.removeAttribute('data-verdandi-header')
+  }
 
   const panes = decoratePanes()
   const details = panes.details
   const detailsText = (details?.textContent ?? '').replace(/\s+/g, ' ').trim()
-  if (/点击消息流中的工具行查看详情|select.+tool.+row.+details|空面板|请先选择会话/i.test(detailsText)) {
-    details?.setAttribute(DETAILS_EMPTY_ATTR, '')
+  const detailsEmpty = /点击消息流中的工具行查看详情|select.+tool.+row.+details|空面板|请先选择会话/i.test(detailsText)
+  if (details) {
+    if (detailsEmpty) setAttrIfChanged(details, DETAILS_EMPTY_ATTR, '')
+    else details.removeAttribute(DETAILS_EMPTY_ATTR)
+  } else {
+    for (const stale of document.querySelectorAll(`[${DETAILS_EMPTY_ATTR}]`)) stale.removeAttribute(DETAILS_EMPTY_ATTR)
   }
 
   const sidebar = panes.sidebar
   if (!sidebar) return
 
+  // Guarded writes only: in steady state this loop performs zero DOM
+  // mutations, so the host's own subtree observers are never fed records by
+  // the skin (the 0.2 sidebar re-measures its virtual list on mutation
+  // bursts, and blind rewrites kept poking it ~9 times a second).
+  const marked = new Set<Element>()
   for (const button of sidebar.querySelectorAll<HTMLButtonElement>('button')) {
     const label = `${button.getAttribute('aria-label') ?? ''} ${button.textContent ?? ''}`.trim()
     const text = (button.textContent ?? '').trim()
@@ -389,13 +468,21 @@ function decorateStableRegions(): void {
     // 0.2 renames the nav entries (插件 / 自动化任务 replace 任务看板 / SSH / 技能中心);
     // both sets stay tagged so the crimson nav treatment addresses either shell.
     if (/newSession/i.test(button.className) || /^(新会话|New session)$/i.test(text)) {
-      button.dataset.verdandiNewSession = ''
+      setAttrIfChanged(button, NEW_SESSION_MARK_ATTR, '')
+      marked.add(button)
     }
     if (/^(任务看板|Task board|SSH|技能中心|Skill center|插件|Plugins|自动化任务|Automations|Automated tasks)$/i.test(text)) {
-      button.dataset.verdandiNavEntry = ''
+      setAttrIfChanged(button, NAV_MARK_ATTR, '')
+      marked.add(button)
     }
     if (/搜索会话|Search sessions|视图选项|View options|添加工作区|Add workspace/i.test(label)) {
-      button.dataset.verdandiSidebarAction = ''
+      setAttrIfChanged(button, SIDEBAR_ACTION_ATTR, '')
+      marked.add(button)
+    }
+  }
+  for (const attr of [NEW_SESSION_MARK_ATTR, NAV_MARK_ATTR, SIDEBAR_ACTION_ATTR]) {
+    for (const tagged of document.querySelectorAll(`[${attr}]`)) {
+      if (!marked.has(tagged)) tagged.removeAttribute(attr)
     }
   }
 }
@@ -420,14 +507,14 @@ function markRunningStatus(conversation: HTMLElement | null): void {
   for (const marked of document.querySelectorAll<HTMLElement>(`[${RUNNING_ATTR}]`)) {
     if (!running.includes(marked)) marked.removeAttribute(RUNNING_ATTR)
   }
-  for (const node of running) node.setAttribute(RUNNING_ATTR, '')
+  for (const node of running) setAttrIfChanged(node, RUNNING_ATTR, '')
 }
 
 function setSidebarSize(body: HTMLElement, sidebar: HTMLElement | null): void {
   const width = sidebar?.getBoundingClientRect().width || sidebar?.offsetWidth || 0
-  if (width > 0 && width < 96) body.setAttribute(SIDEBAR_SIZE_ATTR, 'rail')
-  else if (width > 0 && width < 260) body.setAttribute(SIDEBAR_SIZE_ATTR, 'narrow')
-  else body.setAttribute(SIDEBAR_SIZE_ATTR, 'wide')
+  if (width > 0 && width < 96) setAttrIfChanged(body, SIDEBAR_SIZE_ATTR, 'rail')
+  else if (width > 0 && width < 260) setAttrIfChanged(body, SIDEBAR_SIZE_ATTR, 'narrow')
+  else setAttrIfChanged(body, SIDEBAR_SIZE_ATTR, 'wide')
 }
 
 function measureConversation(conversation: HTMLElement): void {
@@ -446,17 +533,29 @@ function measureConversation(conversation: HTMLElement): void {
     ? Math.max(18, conversationRect.bottom - composerRect.top + 8)
     : 154
 
-  conversation.style.setProperty('--vd-conversation-header-height', `${Math.round(headerHeight)}px`)
-  conversation.style.setProperty('--vd-character-floor', `${Math.round(floor)}px`)
+  // Idle-measuring: identical values are not rewritten, so the pane's style
+  // attribute stops churning once the layout has settled.
+  const headerValue = `${Math.round(headerHeight)}px`
+  const floorValue = `${Math.round(floor)}px`
+  if (conversation.style.getPropertyValue('--vd-conversation-header-height') !== headerValue) {
+    conversation.style.setProperty('--vd-conversation-header-height', headerValue)
+  }
+  if (conversation.style.getPropertyValue('--vd-character-floor') !== floorValue) {
+    conversation.style.setProperty('--vd-character-floor', floorValue)
+  }
 }
 
 function setStageWidth(stage: HTMLElement, conversation: HTMLElement): void {
   const width = conversation.getBoundingClientRect().width || conversation.offsetWidth || 0
-  stage.dataset.verdandiWidth = width >= 1360 ? 'wide' : width >= 840 ? 'medium' : 'compact'
+  const band = width >= 1360 ? 'wide' : width >= 840 ? 'medium' : 'compact'
+  const display = width >= 840 ? 'block' : 'none'
+  if (stage.dataset.verdandiWidth !== band) stage.dataset.verdandiWidth = band
   // The host's alternate work surfaces apply an important aria-hidden rule to
   // decorative children. This is our own node, so an owned inline declaration
   // is the narrowest reliable way to keep it visible on usable widths.
-  stage.style.setProperty('display', width >= 840 ? 'block' : 'none', 'important')
+  if (stage.style.getPropertyValue('display') !== display || stage.style.getPropertyPriority('display') !== 'important') {
+    stage.style.setProperty('display', display, 'important')
+  }
 }
 
 function setConversationView(conversation: HTMLElement): 'chat' | 'trace' {
@@ -465,7 +564,7 @@ function setConversationView(conversation: HTMLElement): 'chat' | 'trace' {
   )
   const label = (selectedTab?.textContent ?? '').trim()
   const view = /^(轨迹|Trace)$/i.test(label) ? 'trace' : 'chat'
-  conversation.setAttribute(CONVERSATION_VIEW_ATTR, view)
+  setAttrIfChanged(conversation, CONVERSATION_VIEW_ATTR, view)
   return view
 }
 
@@ -532,8 +631,14 @@ export function apply(ctx: Context): void {
     const details = firstElement<HTMLElement>("[data-verdandi-pane='details']")
     const workspaceVisible = isRendered(conversation)
 
-    body.toggleAttribute(WORKSPACE_ATTR, workspaceVisible)
-    body.toggleAttribute(MODAL_ATTR, Boolean(document.querySelector("[role='dialog'][aria-modal='true']")))
+    if (workspaceVisible) {
+      body.setAttribute(WORKSPACE_ATTR, '')
+    } else if (body.hasAttribute(WORKSPACE_ATTR)) {
+      body.removeAttribute(WORKSPACE_ATTR)
+    }
+    const modalOpen = Boolean(document.querySelector("[role='dialog'][aria-modal='true']"))
+    if (modalOpen) body.setAttribute(MODAL_ATTR, '')
+    else if (body.hasAttribute(MODAL_ATTR)) body.removeAttribute(MODAL_ATTR)
     setSidebarSize(body, sidebar)
     ensureWeddingDecorations(sidebar, workspaceVisible ? conversation : null, details)
     decorateLegibilityRows(workspaceVisible ? conversation : null)
@@ -543,8 +648,8 @@ export function apply(ctx: Context): void {
       const stage = ensureCharacterStage(conversation)
       const phase = conversation.querySelector<HTMLElement>('[data-phase]')?.getAttribute('data-phase') ?? 'active'
       setConversationView(conversation)
-      stage.dataset.verdandiPhase = phase
-      conversation.setAttribute(CONVERSATION_PHASE_ATTR, phase)
+      if (stage.dataset.verdandiPhase !== phase) stage.dataset.verdandiPhase = phase
+      setAttrIfChanged(conversation, CONVERSATION_PHASE_ATTR, phase)
       measureConversation(conversation)
       setStageWidth(stage, conversation)
     } else {

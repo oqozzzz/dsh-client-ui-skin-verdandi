@@ -331,4 +331,27 @@ describe('verdandi skin on the dsh 0.2 shell', () => {
     // The 0.2 empty-details copy matches the widened empty-state probe.
     expect(document.querySelector("[data-verdandi-pane='details']")?.getAttribute('data-verdandi-details-empty')).toBe('')
   })
+
+  it('gives a 0.2 panel swap the skinned backdrop without the chat chrome', () => {
+    apply(ctx as never)
+    // The plugin-manager page replaces the chat inside the same `main` slot on
+    // dsh 0.2. None of the chat anchors survive the swap.
+    const mainSlot = document.querySelector("[data-slot='main']")
+    mainSlot!.setAttribute('style', 'display: contents')
+    mainSlot!.innerHTML = `<section class="host_plugin_page" data-plugin-panel="true"><h2>插件</h2><ul><li>card</li></ul></section>`
+    ctx = new MockContext()
+    apply(ctx as never)
+
+    // No chat surface chrome: the overflow clip, the stage and the workspace
+    // markers would break or weigh down host scrolling inside the page.
+    expect(document.querySelector("[data-verdandi-pane='conversation']")).toBeNull()
+    expect(document.querySelector('[data-verdandi-stage]')).toBeNull()
+    expect(document.body.hasAttribute('data-verdandi-workspace')).toBe(false)
+    expect(document.querySelector('.host_plugin_page')?.getAttribute('data-verdandi-phase')).toBeNull()
+    expect(document.querySelector('.host_plugin_page')?.style.getPropertyValue('--vd-character-floor')).toBe('')
+    // The page keeps the skinned backdrop through the panel attribute.
+    expect(document.querySelector('[data-verdandi-panel]')?.className).toBe('host_plugin_page')
+    ctx.disposeAll()
+    expect(document.querySelector('[data-verdandi-panel]')).toBeNull()
+  })
 })

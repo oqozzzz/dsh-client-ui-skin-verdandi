@@ -681,6 +681,63 @@ body[data-dsh-verdandi][data-ds-dark-theme] [data-verdandi-pane='conversation'][
     #171015 !important;
 }
 
+/* dsh 0.2 tenants of the `main` slot that are not the transcript — the plugin
+   manager page, the automations page — carry the skinned backdrop through
+   `data-verdandi-panel`. They get the scenic background and the ink tokens so
+   their chrome reads like the rest of the skin, and deliberately none of the
+   chat surface's overflow clip, positioning or stage, so host scrolling inside
+   these pages stays native. */
+body[data-dsh-verdandi] [data-verdandi-panel] {
+  color: var(--vd-ink);
+  background:
+    linear-gradient(
+      90deg,
+      var(--vd-stage-veil-edge) 0%,
+      rgba(255, 253, 251, 0.6) 9%,
+      rgba(255, 253, 251, 0.6) 91%,
+      var(--vd-stage-veil-edge) 100%
+    ),
+    linear-gradient(180deg, rgba(255, 253, 251, 0.14), rgba(248, 242, 237, 0.24)),
+    var(--vd-art-workspace-light) center / cover no-repeat,
+    var(--vd-ivory-soft) !important;
+  --dsw-alias-label-primary: var(--vd-ink);
+  --dsw-alias-label-secondary: #5c434b;
+  --dsw-alias-label-tertiary: #74585f;
+  --dsw-alias-label-caption: var(--vd-ink-meta);
+  --dsw-alias-brand-primary: var(--vd-crimson);
+  --dsw-alias-brand-text: var(--vd-crimson-deep);
+  --dsw-alias-button-primary-fill: var(--vd-crimson);
+  --dsw-alias-button-primary-hover: var(--vd-crimson-soft);
+  --dsw-alias-button-primary-dimmed: rgba(142, 36, 56, 0.15);
+  --dsw-alias-interactive-bg-hover: rgba(142, 36, 56, 0.075);
+  --dsw-alias-interactive-bg-active: rgba(142, 36, 56, 0.13);
+  --dsw-alias-border-l1: rgba(116, 42, 57, 0.2);
+  --dsw-alias-border-l2: rgba(116, 42, 57, 0.34);
+  --dsw-specific-bubble: rgba(255, 253, 251, 0.96);
+  --dsw-specific-bubble-highlight: #faedf0;
+  --dsw-specific-input-major: rgba(255, 253, 251, 0.98);
+}
+
+body[data-dsh-verdandi][data-ds-dark-theme] [data-verdandi-panel] {
+  background:
+    linear-gradient(
+      90deg,
+      var(--vd-stage-veil-edge) 0%,
+      rgba(18, 11, 15, 0.58) 9%,
+      rgba(18, 11, 15, 0.58) 91%,
+      var(--vd-stage-veil-edge) 100%
+    ),
+    linear-gradient(180deg, rgba(25, 15, 20, 0.28), rgba(16, 9, 13, 0.48)),
+    var(--vd-art-workspace-dark) center / cover no-repeat,
+    #171015 !important;
+  --dsw-alias-label-secondary: #d4bbc2;
+  --dsw-alias-label-tertiary: #ab8f97;
+  --dsw-alias-brand-text: var(--vd-crimson-soft);
+  --dsw-specific-bubble: rgba(38, 23, 29, 0.96);
+  --dsw-specific-bubble-highlight: #361f27;
+  --dsw-specific-input-major: rgba(38, 23, 29, 0.98);
+}
+
 body[data-dsh-verdandi] [data-verdandi-pane='conversation'] :is(
   [data-slot='conversation'],
   [data-slot='conversation.session'],

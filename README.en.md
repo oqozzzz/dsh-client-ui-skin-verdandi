@@ -85,9 +85,11 @@ dsh plugin --profile web remove @hjbztlbr/dsh-client-ui-skin-verdandi
 ## Compatibility
 
 - Tested with the DeepSeek Harness `0.1.5-rc.1` and `0.1.7-rc.2` Web profiles and the `0.2.0-rc.2` Windows desktop shell. 0.2 rebuilt the pane structure (the `data-pane` attributes are gone, replaced by slot wrappers), the sidebar navigation and the settings-dialog mount point; the skin probes both shell generations and stays backward-compatible, so 0.1.x behaviour is unchanged. On 0.1.7 both the skin-center `1.0.2` asset form (hooks trusted) and the plugin form were verified: 0.1.7 rebuilt the session header (`conversation.header`), the trigger rows, the user-echo clock row, the context notice rows, the work-steps fold and the turn-process ribbon. All are handled, and the older shell renders unchanged.
+- 0.2 adaptation details: the plugin-manager and automation-task panels carry their own panel mark (scenic backdrop, heavier veil, ink tokens — deliberately no scroll clipping), so wheel scrolling keeps working after panel swaps; and the character stage is reused across session switches as the same node, so the figures no longer reload or flash back from full size to their seated scale.
 - The Windows desktop draws a 40 DIP system caption band (`data-windows-titlebar`); the skin's top ornaments automatically keep clear of it. Browser shells never carry the attribute and keep the original ornament shape.
 - Uses scoped compatibility styles for better-sidebar, AionUI, SSH, Cordis, `.xterm`, and settings portals without replacing terminal ANSI colors or broad system tokens.
 - Decorative avatars and character artwork are hidden at smaller viewport sizes so controls and text remain usable.
+- A few 0.2 desktop issues remain open and tracked (the rightbar “Start” pages stay unskinned; transcript text can bleed through the band below the composer); see the [known-issues log](docs/known-issues-0.2.md) for the list (Simplified Chinese).
 
 ![Settings compatibility preview](preview/settings.png)
 

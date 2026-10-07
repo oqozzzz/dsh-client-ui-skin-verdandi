@@ -85,9 +85,11 @@ dsh plugin --profile web remove @hjbztlbr/dsh-client-ui-skin-verdandi
 ## 兼容性
 
 - 已在 DeepSeek Harness `0.1.5-rc.1`、`0.1.7-rc.2` 的 Web profile 与 `0.2.0-rc.2` 的 Windows 桌面端上测试。0.2 重构了面板结构（`data-pane` 属性被 slot 包装层取代）、导航入口与设置弹窗挂载点，皮肤通过双代探测同时兼容两代宿主；0.1.x 下行为不变。0.1.7 下同时验证了 skin-center `1.0.2` 的资产形态（hooks 受信）与插件形态：0.1.7 重构了会话头部（`conversation.header`）、触发行、用户时钟行、上下文提示行、工作步骤折叠与 turn-process 条带，全部适配；旧版渲染不受影响。
+- 0.2 适配细节：插件管理、自动化任务等非聊天面板使用独立的面板标记（场景背景 + 加重纱幕 + 墨色文字，不带滚动裁剪），面板切换后滚轮正常；切换会话时人物舞台跨根复用同一节点，立绘不再重新加载或从全尺寸闪回坐姿。
 - 桌面端顶部有一条 40 DIP 的系统标题栏（`data-windows-titlebar`），皮肤的顶部装饰会自动避开该区域；浏览器端无此属性，保持原有装饰形态。
 - 对 better-sidebar、AionUI、SSH、Cordis、`.xterm` 与设置 portal 使用定向样式，避免改写终端 ANSI 调色板或全局系统 token。
 - 小尺寸窗口会隐藏装饰性头像和人物舞台，优先保证操作区域与文字可读。
+- 0.2 桌面端仍有若干在跟踪的已知问题（右侧栏「开始」页面未换肤、长会话滚到底时输入卡下方条带透字等），见[已知问题记录](docs/known-issues-0.2.md)。
 
 ![设置界面兼容性预览](preview/settings.png)
 

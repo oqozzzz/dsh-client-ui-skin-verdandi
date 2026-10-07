@@ -226,6 +226,15 @@ html[data-windows-titlebar] body[data-dsh-verdandi] [data-verdandi-pane='sidebar
   top: 0;
 }
 
+/* The 0.2 header puts the session title and its chips across the crest's
+   centre (on 0.1 that centre was empty), so at `top: 4px` the medallion and
+   its ribbon paint straight over the text. Desktop only: drop the crest
+   below the ~40px title band and let it hang off the header's bottom edge.
+   The tabs live on the left, so the centre column below the title is free. */
+html[data-windows-titlebar] body[data-dsh-verdandi] [data-verdandi-header] > [data-verdandi-decoration='header-vow-crest'] {
+  top: 40px;
+}
+
 body[data-dsh-verdandi] [data-verdandi-pane='sidebar'] [data-slot='sidebar'] > [data-verdandi-decoration='sidebar-veil-corners-bottom']::before,
 body[data-dsh-verdandi] [data-verdandi-pane='sidebar'] > [data-verdandi-decoration='sidebar-veil-corners-bottom']::before {
   bottom: -11px;

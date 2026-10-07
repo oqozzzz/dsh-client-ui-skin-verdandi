@@ -367,7 +367,10 @@ function ensureCharacterStage(conversation: HTMLElement, retained: HTMLElement |
   }
 
   for (const stale of document.querySelectorAll<HTMLElement>(STAGE_SELECTOR)) {
-    if (stale !== stage && stale !== retained) stale.remove()
+    if (stale !== stage && stale !== retained) {
+      stale.dataset.verdandiDiscard = ''
+      stale.remove()
+    }
   }
 
   if (
@@ -379,6 +382,7 @@ function ensureCharacterStage(conversation: HTMLElement, retained: HTMLElement |
     conversation.prepend(retained)
     return retained
   }
+  if (retained) retained.dataset.verdandiDiscard = ''
   retained?.remove()
 
   stage = document.createElement('div')
@@ -704,7 +708,26 @@ export function apply(ctx: Context): void {
   }
 
   resizeObserver = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(scheduleSync)
-  const mutationObserver = new MutationObserver(scheduleSync)
+  const mutationObserver = new MutationObserver((mutations) => {
+    // Retain the stage no matter who detaches it. The 0.2 chat→chat session
+    // switch rebuilds the transcript root while the workspace stays visible —
+    // the path where nothing else stashes the stage — so the removal records
+    // are the only reliable hook. A subtree removal lists only its root, so
+    // removed subtrees are searched for the stage as well; deliberate skin
+    // removals mark the node discarded and are never captured.
+    for (const mutation of mutations) {
+      for (const node of mutation.removedNodes) {
+        if (!(node instanceof HTMLElement)) continue
+        if (node.dataset.verdandiDiscard !== undefined) continue
+        if (node.matches(STAGE_SELECTOR)) retainedStage = node
+        else {
+          const inside = node.querySelector<HTMLElement>(STAGE_SELECTOR)
+          if (inside && inside.dataset.verdandiDiscard === undefined) retainedStage = inside
+        }
+      }
+    }
+    scheduleSync()
+  })
   mutationObserver.observe(document.documentElement, {
     childList: true,
     subtree: true,

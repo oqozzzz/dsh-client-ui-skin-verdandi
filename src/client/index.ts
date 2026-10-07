@@ -347,7 +347,16 @@ function ensureWeddingDecorations(
   }
 }
 
-function ensureCharacterStage(conversation: HTMLElement): HTMLElement {
+/**
+ * Mount the character stage inside `conversation`, adopting `retained` when
+ * the host has just swapped the transcript root out from under the previous
+ * stage (dsh 0.2 rebuilds that root on every session switch). Re-inserting
+ * the same node keeps its phase, width and decoded artwork state, so the
+ * figures no longer flash from full size down to their seated scale on each
+ * switch; a freshly built stage would re-run both the scale transition and
+ * the image decode.
+ */
+function ensureCharacterStage(conversation: HTMLElement, retained: HTMLElement | null): HTMLElement {
   let stage = conversation.querySelector<HTMLElement>(`:scope > ${STAGE_SELECTOR}`)
   if (
     stage
@@ -357,9 +366,20 @@ function ensureCharacterStage(conversation: HTMLElement): HTMLElement {
     return stage
   }
 
-  stage?.remove()
+  for (const stale of document.querySelectorAll<HTMLElement>(STAGE_SELECTOR)) {
+    if (stale !== stage && stale !== retained) stale.remove()
+  }
 
-  for (const stale of document.querySelectorAll<HTMLElement>(STAGE_SELECTOR)) stale.remove()
+  if (
+    retained
+    && retained.isConnected === false
+    && retained.querySelector("[data-verdandi-figure='left']")
+    && retained.querySelector("[data-verdandi-figure='right']")
+  ) {
+    conversation.prepend(retained)
+    return retained
+  }
+  retained?.remove()
 
   stage = document.createElement('div')
   stage.dataset.verdandiStage = ''
@@ -603,6 +623,10 @@ export function apply(ctx: Context): void {
   let resizeObserver: ResizeObserver | null = null
   let observed = new Set<Element>()
   let animationFrame = 0
+  // The stage survives host transcript swaps: dsh 0.2 rebuilds the chat root
+  // on every session switch, which used to take the stage — and the figures'
+  // settled scale and decoded artwork — down with it.
+  let retainedStage: HTMLElement | null = null
   const requestFrame = typeof window.requestAnimationFrame === 'function'
     ? window.requestAnimationFrame.bind(window)
     : (callback: FrameRequestCallback) => window.setTimeout(() => callback(Date.now()), 0)
@@ -645,7 +669,8 @@ export function apply(ctx: Context): void {
     markRunningStatus(workspaceVisible ? conversation : null)
 
     if (workspaceVisible) {
-      const stage = ensureCharacterStage(conversation)
+      const stage = ensureCharacterStage(conversation, retainedStage)
+      retainedStage = null
       const phase = conversation.querySelector<HTMLElement>('[data-phase]')?.getAttribute('data-phase') ?? 'active'
       setConversationView(conversation)
       if (stage.dataset.verdandiPhase !== phase) stage.dataset.verdandiPhase = phase
@@ -653,7 +678,11 @@ export function apply(ctx: Context): void {
       measureConversation(conversation)
       setStageWidth(stage, conversation)
     } else {
-      for (const stage of document.querySelectorAll<HTMLElement>(STAGE_SELECTOR)) stage.remove()
+      const stage = document.querySelector<HTMLElement>(STAGE_SELECTOR)
+      if (stage instanceof HTMLElement) retainedStage = stage
+      for (const stale of document.querySelectorAll<HTMLElement>(STAGE_SELECTOR)) {
+        if (stale !== retainedStage) stale.remove()
+      }
       for (const pane of document.querySelectorAll<HTMLElement>("[data-verdandi-pane='conversation']")) {
         pane.removeAttribute(CONVERSATION_PHASE_ATTR)
         pane.removeAttribute(CONVERSATION_VIEW_ATTR)
@@ -704,6 +733,7 @@ export function apply(ctx: Context): void {
     }
 
     clearOwnedHooks()
+    retainedStage = null
     for (const decoration of document.querySelectorAll<HTMLElement>(DECORATION_SELECTOR)) decoration.remove()
     for (const slip of document.querySelectorAll<HTMLElement>(`[${SLIP_ATTR}]`)) slip.removeAttribute(SLIP_ATTR)
     for (const stage of document.querySelectorAll<HTMLElement>(STAGE_SELECTOR)) stage.remove()

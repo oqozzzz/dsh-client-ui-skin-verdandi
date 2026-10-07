@@ -336,7 +336,7 @@ describe('verdandi skin on the dsh 0.2 shell', () => {
     apply(ctx as never)
     // The plugin-manager page replaces the chat inside the same `main` slot on
     // dsh 0.2. None of the chat anchors survive the swap.
-    const mainSlot = document.querySelector("[data-slot='main']")
+    const mainSlot = document.querySelector<HTMLElement>("[data-slot='main']")
     mainSlot!.setAttribute('style', 'display: contents')
     mainSlot!.innerHTML = `<section class="host_plugin_page" data-plugin-panel="true"><h2>插件</h2><ul><li>card</li></ul></section>`
     ctx = new MockContext()
@@ -348,7 +348,7 @@ describe('verdandi skin on the dsh 0.2 shell', () => {
     expect(document.querySelector('[data-verdandi-stage]')).toBeNull()
     expect(document.body.hasAttribute('data-verdandi-workspace')).toBe(false)
     expect(document.querySelector('.host_plugin_page')?.getAttribute('data-verdandi-phase')).toBeNull()
-    expect(document.querySelector('.host_plugin_page')?.style.getPropertyValue('--vd-character-floor')).toBe('')
+    expect(document.querySelector<HTMLElement>('.host_plugin_page')?.style.getPropertyValue('--vd-character-floor')).toBe('')
     // The page keeps the skinned backdrop through the panel attribute.
     expect(document.querySelector('[data-verdandi-panel]')?.className).toBe('host_plugin_page')
     ctx.disposeAll()

@@ -54,7 +54,11 @@ dsh plugin --profile desktop add @hjbztlbr/dsh-client-ui-skin-verdandi
 Or from GitHub:
 
 ```powershell
+# Web profile (browser)
 dsh plugin --profile web add github:Sddft97/dsh-client-ui-skin-verdandi
+
+# Desktop profile (the official 0.2+ desktop app)
+dsh plugin --profile desktop add github:Sddft97/dsh-client-ui-skin-verdandi
 ```
 
 After installation, enable “Verdandi · White Vow” in the plugin/skin manager and press `Ctrl+F5` to force-refresh the page.
@@ -77,9 +81,11 @@ Choose Light, Dark, or Follow System under “Settings → General → Appearanc
 ```powershell
 # Update
 dsh plugin --profile web update @hjbztlbr/dsh-client-ui-skin-verdandi
+dsh plugin --profile desktop update @hjbztlbr/dsh-client-ui-skin-verdandi
 
 # Uninstall
 dsh plugin --profile web remove @hjbztlbr/dsh-client-ui-skin-verdandi
+dsh plugin --profile desktop remove @hjbztlbr/dsh-client-ui-skin-verdandi
 ```
 
 ## Compatibility
@@ -117,6 +123,7 @@ pnpm build
 pnpm test
 pnpm typecheck
 dsh plugin --profile web add link:C:/absolute/path/to/dsh-client-ui-skin-verdandi
+dsh plugin --profile desktop add link:C:/absolute/path/to/dsh-client-ui-skin-verdandi
 ```
 
 The package follows the DSH skin-plugin structure: `cordis.patch.yml` registers the bundle row, `skin.json` provides skin metadata, and the client keeps a reversible `apply()` / `dispose()` contract. Runtime styles are scoped under `body[data-dsh-verdandi]`.

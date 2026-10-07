@@ -54,7 +54,11 @@ dsh plugin --profile desktop add @hjbztlbr/dsh-client-ui-skin-verdandi
 或从 GitHub 安装：
 
 ```powershell
+# Web profile（浏览器端）
 dsh plugin --profile web add github:Sddft97/dsh-client-ui-skin-verdandi
+
+# Desktop profile（0.2+ 官方桌面端）
+dsh plugin --profile desktop add github:Sddft97/dsh-client-ui-skin-verdandi
 ```
 
 安装后在插件/皮肤管理界面启用「薇儿丹蒂 · 纯白圣誓」，再按 `Ctrl+F5` 强制刷新页面。
@@ -77,9 +81,11 @@ dsh plugin --profile web add github:Sddft97/dsh-client-ui-skin-verdandi
 ```powershell
 # 更新
 dsh plugin --profile web update @hjbztlbr/dsh-client-ui-skin-verdandi
+dsh plugin --profile desktop update @hjbztlbr/dsh-client-ui-skin-verdandi
 
 # 卸载
 dsh plugin --profile web remove @hjbztlbr/dsh-client-ui-skin-verdandi
+dsh plugin --profile desktop remove @hjbztlbr/dsh-client-ui-skin-verdandi
 ```
 
 ## 兼容性
@@ -117,6 +123,7 @@ pnpm build
 pnpm test
 pnpm typecheck
 dsh plugin --profile web add link:C:/absolute/path/to/dsh-client-ui-skin-verdandi
+dsh plugin --profile desktop add link:C:/absolute/path/to/dsh-client-ui-skin-verdandi
 ```
 
 插件遵循 DSH skin plugin 结构：`cordis.patch.yml` 注册 bundle row，`skin.json` 提供皮肤元数据，客户端实现保持可逆的 `apply()` / `dispose()` 契约。运行时样式位于 `body[data-dsh-verdandi]` 作用域。

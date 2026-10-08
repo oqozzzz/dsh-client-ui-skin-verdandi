@@ -73,6 +73,12 @@ describe('verdandi compatibility guardrails', () => {
     expect(CSS).toMatch(/\[data-composer-seat\]\s*\{[\s\S]*?background: transparent !important/)
   })
 
+  it('takes the stage figures off the trace view', () => {
+    expect(CSS).toMatch(
+      /\[data-verdandi-pane='conversation'\]\[data-verdandi-view='trace'\] \.characterFigure\s*\{[^}]*display: none !important/,
+    )
+  })
+
   it('pads markdown cards without painting the whole user row', () => {
     expect(CSS).toMatch(/\[class\*='_markdown_'\][\s\S]*?padding: 14px 16px/)
     expect(CSS).toMatch(/\[class\*='_userRow'\][\s\S]*?background: transparent !important/)
@@ -222,6 +228,18 @@ describe('verdandi compatibility guardrails', () => {
     expect(timelineRule).not.toMatch(/28vh|320px/)
     expect(CSS).not.toMatch(/data-verdandi-trace-empty|SEQUENCE ARCHIVE/)
     expect(CSS).not.toMatch(/\[aria-label='Trajectory timeline'\]::(?:before|after)/)
+  })
+
+  it('carries the 0.2 trace overlay on the panel backdrop with its slabs transparent', () => {
+    expect(CSS).toMatch(
+      /\[data-verdandi-pane='conversation'\]\[data-verdandi-view='trace'\] \[data-conversation-composer-overlay\]\s*\{[\s\S]*?--vd-art-workspace-light/,
+    )
+    expect(CSS).toMatch(
+      /\[data-ds-dark-theme\] \[data-verdandi-pane='conversation'\]\[data-verdandi-view='trace'\] \[data-conversation-composer-overlay\]\s*\{[\s\S]*?--vd-art-workspace-dark/,
+    )
+    expect(CSS).toMatch(
+      /\[data-conversation-composer-overlay\] :is\(\s*\[role='toolbar'\][\s\S]*?background-color: transparent !important/,
+    )
   })
 
   it('groups composer statistics into one compact ribbon', () => {

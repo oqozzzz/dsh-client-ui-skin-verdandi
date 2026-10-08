@@ -274,6 +274,45 @@
 
 ---
 
+## #7 轨迹页整块白底（官方原版风格）+ 立绘压在时间线上
+
+**状态**：已修复（本地测试全绿，待桌面端实测确认） · **优先级**：中（纯视觉，整视图无皮肤）
+
+### 现象
+
+切到「轨迹」tab 后主内容区整块白底：左侧轨迹事件表 + 右侧「事件详情」子面板
+（概述/预览/原始内容/来源 tabs，可拖宽）均为宿主原版白底；同时舞台立绘
+（z-index 0 定位元素）绘制在白底盒（普通流）之上，压在时间线区域。
+
+### 根因（2026-10-08 DOM 采样确认）
+
+0.2 的轨迹视图是与聊天流**同位的换租户**：`[data-slot='conversation.view']`（display:
+contents）下换入 `hGyLPq_root`（带宿主语义锚 `data-conversation-composer-overlay`，
+`background: rgb(255,255,255)`，满高）。其内部还有多层自绘白底：`QnvEwG_root`
+（轨迹工具栏）、`ZNyiNW_plot`（时间线概览）、`haSm5q_split` → `tablePane` →
+`haSm5q_table`（事件表）、`QnvEwG_search`、`haSm5q_historyLoadButton`、
+`haSm5q_details`（事件详情 aside，aria-label「事件详情」）。皮肤的透明化清单
+（`conversation` / `conversation.session` / `conversation.view` / `[data-phase]`）
+只覆盖 slot 层，不含这个租户根；0.1.x 的轨迹卡片化规则锚
+`aria-label='Trajectory timeline'` 在 0.2 已本地化为中文「轨迹时间线」（挂在
+`ZNyiNW_root` 上），旧锚对新结构落空。
+
+### 修复（对齐插件管理页/自动化任务页的 `data-verdandi-panel` 风格）
+
+1. `hGyLPq_root`（`[data-conversation-composer-overlay]`）以选择器合并并入
+   `[data-verdandi-panel]` 背景规则组（明暗两套）：场景插画 + 加重纱幕雾化 +
+   墨色 token，作用域限定皮肤自有状态 `data-verdandi-view='trace'`，对话视图零影响
+2. 内层白底板（工具栏/概览/表格/搜索/加载按钮/事件详情 aside）一律
+   `background-color: transparent !important`，纱幕透出全视图；行悬停、轮次
+   轨道条、时序彩条保留宿主自身颜色
+3. 轨迹视图下 `.characterFigure`（左右立绘）`display: none !important`——藏
+   figure 而非 stage（`setStageWidth` 给 stage 打了 inline `!important` 的
+   display，藏 stage 会被顶掉）
+4. 0.1.x 的 `Trajectory timeline` 卡片化规则**保留**（英文锚在 0.1 上存活，
+   双代兼容约束下的 additive 决策）
+
+---
+
 ## 已修复（存档）
 
 | 提交 | 问题 |

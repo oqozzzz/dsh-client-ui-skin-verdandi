@@ -1832,10 +1832,13 @@ body[data-dsh-verdandi] [data-verdandi-pane='conversation'] [data-turn-trigger]:
    (crimson in light, gold in dark). Paint only: the marks keep the host's 10px
    hit boxes and the scroller's behaviour. */
 body[data-dsh-verdandi] [data-slot='conversation.view'] nav:has([class*='_marks']) {
+  /* The turn-rail backband scales with the veil strength too: at 0% fog the
+     raw scene shows through the rail exactly like the stage, instead of the
+     fixed band reading as an extra layer of fog the slider cannot remove. */
   background: linear-gradient(
     90deg,
     transparent,
-    color-mix(in srgb, var(--vd-slip) 62%, transparent) 42%
+    color-mix(in srgb, var(--vd-slip) calc(62% * var(--vd-veil-strength)), transparent) 42%
   );
   border-radius: 10px 0 0 10px;
 }

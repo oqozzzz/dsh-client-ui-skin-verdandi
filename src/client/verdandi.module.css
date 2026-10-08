@@ -35,17 +35,10 @@ body[data-dsh-verdandi] {
   --vd-bare-ink: #1b1116;
   --vd-danger: #9c1f30;
   --vd-warn: #7d5310;
-  /* The stage veil compresses the artwork's range so bare ink survives it. In
-     light mode it used to be white, which pushed the whole column towards paper
-     white and read as an overlay; a warm neutral at a lower alpha darkens
-     instead of washing, so the artwork keeps its depth and the reading surfaces
-     stay the brightest thing on screen. These chat-side values are FIXED — the
-     settings fog slider only drives the swap surfaces (plugins / automations /
-     trace) through `--vd-veil-strength` below. */
+  /* The chat stage shows the artwork raw (no graduated wash). The one fog
+     control left is `--vd-veil-strength`: the settings slider drives it 0-1
+     and only the swap surfaces (plugins / automations / trace) consume it. */
   --vd-veil-strength: 1;
-  --vd-stage-veil: rgba(255, 253, 251, 0.22);
-  --vd-stage-veil-edge: rgba(255, 253, 251, 0.08);
-  --vd-stage-veil-hero: rgba(255, 253, 251, 0.05);
   --dsw-font-family: 'Avenir Next', 'PingFang SC', 'Microsoft YaHei', system-ui, sans-serif;
   --dsw-font-family-code: 'JetBrains Mono', 'Cascadia Code', Consolas, monospace;
   background-color: #f8f2ed;
@@ -76,10 +69,6 @@ body[data-dsh-verdandi][data-ds-dark-theme] {
   --vd-bare-ink: #fbf3f5;
   --vd-danger: #ff9aa9;
   --vd-warn: #f0cd8a;
-  --vd-veil-strength: 1;
-  --vd-stage-veil: rgba(18, 11, 15, 0.24);
-  --vd-stage-veil-edge: rgba(18, 11, 15, 0.1);
-  --vd-stage-veil-hero: rgba(18, 11, 15, 0.06);
   background-color: #171015;
 }
 
@@ -623,15 +612,9 @@ body[data-dsh-verdandi] [data-verdandi-pane='conversation'] {
   isolation: isolate;
   overflow: hidden;
   color: var(--vd-ink);
+  /* No fog on the chat stage: the artwork shows raw. Reading surfaces carry
+     their own paper and slips, so nothing here needs the old graduated wash. */
   background:
-    linear-gradient(
-      90deg,
-      var(--vd-stage-veil-edge) 0%,
-      var(--vd-stage-veil) 9%,
-      var(--vd-stage-veil) 91%,
-      var(--vd-stage-veil-edge) 100%
-    ),
-    linear-gradient(180deg, rgba(255, 253, 251, 0.05), rgba(248, 242, 237, 0.12)),
     var(--vd-art-workspace-light) center / cover no-repeat,
     var(--vd-ivory-soft) !important;
   --dsw-alias-label-primary: var(--vd-ink);
@@ -657,25 +640,15 @@ body[data-dsh-verdandi] [data-verdandi-pane='conversation'] {
 }
 
 body[data-dsh-verdandi] [data-verdandi-pane='conversation'][data-verdandi-phase='hero'] {
-  /* With no transcript to carry, the veil lifts and the stage composition
-     stays as vivid as the artwork allows. */
+  /* Same raw artwork as the active chat — the hero composition simply is the
+     scene at full strength. */
   background:
-    linear-gradient(90deg, transparent 0%, var(--vd-stage-veil-hero) 9% 91%, transparent 100%),
-    linear-gradient(180deg, rgba(255, 253, 251, 0.03), rgba(248, 242, 237, 0.08)),
     var(--vd-art-workspace-light) center / cover no-repeat,
     var(--vd-ivory-soft) !important;
 }
 
 body[data-dsh-verdandi][data-ds-dark-theme] [data-verdandi-pane='conversation'] {
   background:
-    linear-gradient(
-      90deg,
-      var(--vd-stage-veil-edge) 0%,
-      var(--vd-stage-veil) 9%,
-      var(--vd-stage-veil) 91%,
-      var(--vd-stage-veil-edge) 100%
-    ),
-    linear-gradient(180deg, rgba(25, 15, 20, 0.28), rgba(16, 9, 13, 0.48)),
     var(--vd-art-workspace-dark) center / cover no-repeat,
     #171015 !important;
   --dsw-alias-label-secondary: #d4bbc2;
@@ -688,8 +661,6 @@ body[data-dsh-verdandi][data-ds-dark-theme] [data-verdandi-pane='conversation'] 
 
 body[data-dsh-verdandi][data-ds-dark-theme] [data-verdandi-pane='conversation'][data-verdandi-phase='hero'] {
   background:
-    linear-gradient(90deg, transparent 0%, var(--vd-stage-veil-hero) 9% 91%, transparent 100%),
-    linear-gradient(180deg, rgba(25, 15, 20, 0.18), rgba(16, 9, 13, 0.36)),
     var(--vd-art-workspace-dark) center / cover no-repeat,
     #171015 !important;
 }
@@ -1846,11 +1817,8 @@ body[data-dsh-verdandi] [data-verdandi-pane='conversation'] [data-turn-trigger]:
    (crimson in light, gold in dark). Paint only: the marks keep the host's 10px
    hit boxes and the scroller's behaviour. */
 body[data-dsh-verdandi] [data-slot='conversation.view'] nav:has([class*='_marks']) {
-  background: linear-gradient(
-    90deg,
-    transparent,
-    color-mix(in srgb, var(--vd-slip) 62%, transparent) 42%
-  );
+  /* No backband: the turn rail floats on the raw artwork with just its ticks. */
+  background: transparent;
   border-radius: 10px 0 0 10px;
 }
 
@@ -2079,18 +2047,6 @@ body[data-dsh-verdandi] [data-verdandi-pane='conversation'] [class*='_turnStatus
     border-color: var(--vd-line-strong);
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
-  }
-
-  body[data-dsh-verdandi] [data-verdandi-pane='conversation'] {
-    --vd-stage-veil: rgba(255, 253, 251, 0.34);
-    --vd-stage-veil-edge: rgba(255, 253, 251, 0.16);
-    --vd-stage-veil-hero: rgba(255, 253, 251, 0.12);
-  }
-
-  body[data-dsh-verdandi][data-ds-dark-theme] [data-verdandi-pane='conversation'] {
-    --vd-stage-veil: rgba(18, 11, 15, 0.42);
-    --vd-stage-veil-edge: rgba(18, 11, 15, 0.18);
-    --vd-stage-veil-hero: rgba(18, 11, 15, 0.3);
   }
 
   body[data-dsh-verdandi] [data-verdandi-pane='conversation'] :is(

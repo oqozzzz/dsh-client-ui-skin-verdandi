@@ -107,12 +107,15 @@ const DECORATION_SELECTOR = '[data-verdandi-decoration]'
 const LEGACY_SELECTOR = '[data-verdandi-sidebar-card], [data-verdandi-wedding], [data-verdandi-chrome]'
 const THEME_SOURCE = '@hjbztlbr/dsh-client-ui-skin-verdandi'
 /**
- * Skin-owned settings control: a fixed gear button with a paper panel. Not a
- * decoration (it is interactive and must not inherit the aria-hidden treatment),
- * so it carries its own attribute and its own dispose path.
+ * Skin settings live in the host settings dialog as a `settings.section` slot
+ * registration (the same channel the rail-tones plugin uses), not in a floating
+ * control. The one option today is the veil strength; it persists through
+ * localStorage and is seeded onto the body inline style on every attach.
  */
-const SETTINGS_ATTR = 'data-verdandi-settings'
+const SETTINGS_SECTION_ID = 'ui-skin-verdandi'
 const VEIL_STORAGE_KEY = 'verdandi:veil-strength'
+const SETTINGS_RETRY_MS = 400
+const SETTINGS_MAX_TRIES = 60
 const OWNED_HOOKS = [
   'data-verdandi-header',
   'data-verdandi-new-session',
@@ -624,92 +627,162 @@ function applyVeilStrength(body: HTMLElement, strength: number): void {
   }
 }
 
+/** Minimal shape of the shell's slot service (proven against 0.2.0-rc.2). */
+type SettingsSlots = {
+  inject(slot: string, onDeclared: () => void): void
+  register(declaration: Record<string, unknown>, component: unknown): void
+}
+
+/** The slice of React the settings card needs; served by the platform module table. */
+type ReactModule = {
+  createElement(
+    type: string,
+    props?: Record<string, unknown> | null,
+    ...children: unknown[]
+  ): unknown
+  useState<T>(initial: T | (() => T)): [T, (value: T) => void]
+}
+
 /**
- * Mount the skin's settings control once and wire its behavior. Returns the
- * teardown: listener removal and the node itself, so dispose leaves no control
- * and no live handler behind. The slider drives `--vd-veil-strength` (0–1) on
- * the body inline style — the stylesheet scales every veil color from it — and
- * persists through localStorage for the next session.
+ * The loader hands the client factory the platform require as its parameter —
+ * in the built CJS bundle `require` binds to that parameter, so an aliased
+ * call stays a runtime lookup (a direct `require('react')` literal would be
+ * resolved at build time, and react is deliberately not installed here).
  */
-function ensureSettingsControl(body: HTMLElement): () => void {
-  const existing = document.querySelector<HTMLElement>(`[${SETTINGS_ATTR}]`)
-  if (existing) existing.remove()
-
-  const root = document.createElement('div')
-  root.setAttribute(SETTINGS_ATTR, '')
-
-  const toggle = document.createElement('button')
-  toggle.type = 'button'
-  toggle.className = css.settingsToggle ?? 'verdandiSettingsToggle'
-  toggle.setAttribute('aria-label', 'Verdandi 皮肤设置')
-  toggle.setAttribute('aria-expanded', 'false')
-
-  const panel = document.createElement('div')
-  panel.className = css.settingsPanel ?? 'verdandiSettingsPanel'
-
-  const title = document.createElement('div')
-  title.className = css.settingsTitle ?? 'verdandiSettingsTitle'
-  title.textContent = 'Verdandi 设置'
-
-  const row = document.createElement('label')
-  row.className = css.settingsRow ?? 'verdandiSettingsRow'
-
-  const label = document.createElement('span')
-  label.textContent = '雾化'
-
-  const range = document.createElement('input')
-  range.type = 'range'
-  range.className = css.settingsRange ?? 'verdandiSettingsRange'
-  range.min = '0'
-  range.max = '100'
-  range.step = '1'
-  range.setAttribute('aria-label', '雾化浓度')
-
-  const value = document.createElement('span')
-  value.className = css.settingsValue ?? 'verdandiSettingsValue'
-
-  const hint = document.createElement('p')
-  hint.className = css.settingsHint ?? 'verdandiSettingsHint'
-  hint.textContent = '场景画上的纱幕浓度，0% 完全透出画稿；即时生效并记住。'
-
-  row.append(label, range, value)
-  panel.append(title, row, hint)
-  root.append(toggle, panel)
-  body.append(root)
-
-  const strength = readVeilStrength()
-  applyVeilStrength(body, strength)
-  range.value = String(Math.round(strength * 100))
-  value.textContent = `${Math.round(strength * 100)}%`
-
-  const setOpen = (open: boolean) => {
-    if (open) panel.setAttribute('data-open', '')
-    else panel.removeAttribute('data-open')
-    toggle.setAttribute('aria-expanded', String(open))
+function acquireReact(): ReactModule | null {
+  try {
+    const runtimeRequire = typeof require === 'function' ? require : null
+    const mod = (runtimeRequire?.('react') ?? null) as ReactModule | null
+    if (mod && typeof mod.createElement === 'function' && typeof mod.useState === 'function') return mod
+  } catch {
+    /* platform table without react: the settings card is skipped */
   }
-  const onToggle = () => setOpen(panel.getAttribute('data-open') === null)
-  const onRange = () => {
-    const percent = Math.round(Number(range.value))
-    applyVeilStrength(body, percent / 100)
-    value.textContent = `${percent}%`
-    try {
-      localStorage.setItem(VEIL_STORAGE_KEY, String(percent / 100))
-    } catch {
-      /* storage unavailable: the setting just won't survive a reload */
+  return null
+}
+
+/* Card furniture mirrors the rail-tones settings section, so both plugin
+   cards read as one dialog. Colors lean on the host's alias tokens. */
+const SETTINGS_CARD_STYLE: Record<string, string> = {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '14px',
+  padding: '14px 16px',
+  border: '1px solid var(--dsw-alias-border-secondary, rgba(127, 127, 127, 0.24))',
+  borderRadius: '12px',
+  fontSize: '13px',
+  lineHeight: '1.5',
+  color: 'inherit',
+}
+const SETTINGS_ROW_STYLE: Record<string, string> = {
+  display: 'flex',
+  alignItems: 'flex-start',
+  justifyContent: 'space-between',
+  gap: '16px',
+}
+const SETTINGS_TEXT_STYLE: Record<string, string> = { display: 'flex', flexDirection: 'column', gap: '4px', minWidth: '0' }
+const SETTINGS_TITLE_STYLE: Record<string, string> = { fontSize: '13px', fontWeight: '600' }
+const SETTINGS_DESC_STYLE: Record<string, string> = { fontSize: '12px', opacity: '0.66' }
+const SETTINGS_CONTROL_STYLE: Record<string, string> = { display: 'flex', alignItems: 'center', gap: '8px', flex: '0 0 auto' }
+const SETTINGS_SLIDER_STYLE: Record<string, string> = { width: '140px', accentColor: 'var(--dsw-alias-brand-primary, #4d6bfe)' }
+const SETTINGS_VALUE_STYLE: Record<string, string> = { fontSize: '12px', opacity: '0.66', minWidth: '36px', textAlign: 'right' }
+
+/**
+ * Mount the skin's settings section in the host settings dialog and wire its
+ * behavior. Returns the teardown: the retry timer removal, so dispose leaves
+ * no pending registration attempt behind. The slider drives
+ * `--vd-veil-strength` (0–1) on the body inline style — the stylesheet scales
+ * every veil color from it — and persists through localStorage for the next
+ * session.
+ *
+ * Both `ctx.slots` and the platform React may not be there yet when this runs
+ * (the skin attaches before the shell declares its slots owner), so inject and
+ * register each retry on a bounded budget and the whole attempt is skipped
+ * quietly when the environment cannot support it — the skin itself never
+ * depends on the settings card.
+ */
+function registerSettingsSection(ctx: Context): () => void {
+  const slots = (ctx as unknown as { slots?: SettingsSlots }).slots
+  if (!slots || typeof slots.inject !== 'function' || typeof slots.register !== 'function') return () => {}
+  const React = acquireReact()
+  if (!React) return () => {}
+  const h = React.createElement
+
+  const VerdandiSettingsCard = () => {
+    const [percent, setPercent] = React.useState(() => Math.round(readVeilStrength() * 100))
+    const onRange = (event: { target: { value: string } }) => {
+      const next = Math.round(Number(event.target.value)) || 0
+      setPercent(next)
+      applyVeilStrength(document.body, next / 100)
+      try {
+        localStorage.setItem(VEIL_STORAGE_KEY, String(next / 100))
+      } catch {
+        /* storage unavailable: the setting just won't survive a reload */
+      }
     }
+    return h('div', { style: SETTINGS_CARD_STYLE }, [
+      h('div', { key: 'row', style: SETTINGS_ROW_STYLE }, [
+        h('div', { key: 'text', style: SETTINGS_TEXT_STYLE }, [
+          h('div', { key: 'title', style: SETTINGS_TITLE_STYLE }, '雾化浓度'),
+          h('div', { key: 'desc', style: SETTINGS_DESC_STYLE }, '场景画上的纱幕浓度，0% 完全透出画稿。'),
+        ]),
+        h('div', { key: 'control', style: SETTINGS_CONTROL_STYLE }, [
+          h('input', {
+            key: 'slider',
+            type: 'range',
+            min: 0,
+            max: 100,
+            step: 1,
+            value: percent,
+            'aria-label': '雾化浓度',
+            onChange: onRange,
+            style: SETTINGS_SLIDER_STYLE,
+          }),
+          h('span', { key: 'value', style: SETTINGS_VALUE_STYLE }, `${percent}%`),
+        ]),
+      ]),
+    ])
   }
-  const onOutside = (event: MouseEvent) => {
-    if (!root.contains(event.target as Node)) setOpen(false)
+
+  let timer: ReturnType<typeof setTimeout> | null = null
+  let tries = 0
+  let registered = false
+  const attempt = (): boolean => {
+    if (registered) return true
+    tries += 1
+    try {
+      slots.inject('settings.section', () => {
+        if (registered) return
+        try {
+          slots.register(
+            {
+              name: 'settings.section',
+              id: SETTINGS_SECTION_ID,
+              order: 46,
+              label: () => 'Verdandi 皮肤',
+              inject: () => ({}),
+            },
+            VerdandiSettingsCard,
+          )
+          registered = true
+        } catch {
+          /* retried by the outer budget until it runs out */
+        }
+      })
+    } catch {
+      /* the slots owner has not declared the section yet: retried below */
+    }
+    return registered
   }
-  toggle.addEventListener('click', onToggle)
-  range.addEventListener('input', onRange)
-  document.addEventListener('click', onOutside)
+  const tick = () => {
+    if (registered || attempt()) return
+    if (tries >= SETTINGS_MAX_TRIES) return
+    timer = setTimeout(tick, SETTINGS_RETRY_MS)
+  }
+  tick()
 
   return () => {
-    toggle.removeEventListener('click', onToggle)
-    range.removeEventListener('input', onRange)
-    document.removeEventListener('click', onOutside)
-    root.remove()
+    if (timer !== null) clearTimeout(timer)
+    timer = null
   }
 }
 
@@ -738,7 +811,8 @@ export function apply(ctx: Context): void {
     body.style.setProperty(property, `url(${JSON.stringify(asset)})`)
   }
   const previousVeilStrength = body.style.getPropertyValue('--vd-veil-strength')
-  const disposeSettings = ensureSettingsControl(body)
+  applyVeilStrength(body, readVeilStrength())
+  const disposeSettingsRetries = registerSettingsSection(ctx)
   body.setAttribute(SKIN_ATTR, '')
   removeLegacyNodes()
 
@@ -862,7 +936,7 @@ export function apply(ctx: Context): void {
     if (animationFrame) cancelFrame(animationFrame)
     window.removeEventListener('resize', scheduleSync)
     window.visualViewport?.removeEventListener('resize', scheduleSync)
-    disposeSettings()
+    disposeSettingsRetries()
     if (previousVeilStrength) body.style.setProperty('--vd-veil-strength', previousVeilStrength)
     else body.style.removeProperty('--vd-veil-strength')
 
@@ -889,3 +963,11 @@ export function apply(ctx: Context): void {
     for (const [attribute, previous] of previousAttributes) restoreAttribute(body, attribute, previous)
   }, 'ui-skin-verdandi: white-vow presentation')
 }
+
+/**
+ * Cordis service dependencies. `slots` is what lets the skin register its
+ * settings card into the host settings dialog; without the declaration the
+ * shell never attaches the service and `ctx.slots` stays undefined (the skin
+ * still works — the card is just skipped).
+ */
+export const inject = ['slots']

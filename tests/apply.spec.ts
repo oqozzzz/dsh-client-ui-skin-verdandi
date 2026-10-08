@@ -39,6 +39,9 @@ const LEGACY_HEADER = `<div data-slot="conversation.session.header" style="displ
 describe('verdandi skin apply/dispose contract', () => {
   let ctx: MockContext
   beforeEach(() => {
+    // Apply leaves user-level state (storage, body inline style) by design;
+    // each veil case below also strips both in-stack right before attach, so
+    // async leftovers from an earlier (never-disposed) apply cannot leak in.
     document.body.innerHTML = `
       <div id="root">
         <div data-pane="sidebar">
@@ -371,38 +374,26 @@ describe('verdandi skin on the dsh 0.2 shell', () => {
     expect(document.querySelector('[data-verdandi-panel]')).toBeNull()
   })
 
-  it('mounts the settings control with the persisted veil strength', () => {
+  it('seeds the persisted veil strength onto the body and clears it on dispose', () => {
     localStorage.setItem('verdandi:veil-strength', '0.4')
+    document.body.style.removeProperty('--vd-veil-strength')
+    const prior = document.body.style.getPropertyValue('--vd-veil-strength')
     apply(ctx as never)
-
-    const root = document.querySelector('[data-verdandi-settings]')
-    expect(root).not.toBeNull()
-    const range = root!.querySelector('input[type="range"]') as HTMLInputElement
-    expect(range.min).toBe('0')
-    expect(range.max).toBe('100')
-    expect(range.value).toBe('40')
     expect(document.body.style.getPropertyValue('--vd-veil-strength')).toBe('0.40')
-  })
-
-  it('moves the veil strength with the slider and remembers it', () => {
-    apply(ctx as never)
-    const range = document.querySelector('[data-verdandi-settings] input[type="range"]') as HTMLInputElement
-    range.value = '0'
-    range.dispatchEvent(new Event('input'))
-
-    expect(document.body.style.getPropertyValue('--vd-veil-strength')).toBe('0.00')
-    expect(localStorage.getItem('verdandi:veil-strength')).toBe('0')
-    expect(range.value).toBe('0')
-  })
-
-  it('removes the settings control and restores the prior veil variable on dispose', () => {
-    document.body.style.setProperty('--vd-veil-strength', '0.55')
-    apply(ctx as never)
-    expect(document.querySelector('[data-verdandi-settings]')).not.toBeNull()
 
     ctx.disposeAll()
-    expect(document.querySelector('[data-verdandi-settings]')).toBeNull()
-    expect(document.body.style.getPropertyValue('--vd-veil-strength')).toBe('0.55')
+    expect(document.body.style.getPropertyValue('--vd-veil-strength')).toBe(prior)
     localStorage.removeItem('verdandi:veil-strength')
+  })
+
+  it('restores a pre-existing veil variable on dispose', () => {
+    localStorage.removeItem('verdandi:veil-strength')
+    document.body.style.setProperty('--vd-veil-strength', '0.55')
+    apply(ctx as never)
+    // With no stored preference the attach seeds the designed default (1).
+    expect(document.body.style.getPropertyValue('--vd-veil-strength')).toBe('1.00')
+
+    ctx.disposeAll()
+    expect(document.body.style.getPropertyValue('--vd-veil-strength')).toBe('0.55')
   })
 })

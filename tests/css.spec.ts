@@ -259,14 +259,9 @@ describe('verdandi compatibility guardrails', () => {
 
   it('scales every veil color from the one strength variable', () => {
     const matches = CSS.match(/--vd-stage-veil:[^;]*color-mix\(in srgb, [^;]*calc\(var\(--vd-veil-strength\) \* 100%\), transparent\)/g) ?? []
-    // body light, body dark, desktop pane light, desktop pane dark.
+    // body light, body dark, high-contrast pane light, high-contrast pane dark.
     expect(matches.length).toBe(4)
     expect(CSS).toMatch(/--vd-veil-strength: 1/)
-  })
-
-  it('owns a settings control that steps aside while a modal is open', () => {
-    expect(CSS).toMatch(/\[data-verdandi-settings\] \.settingsPanel\s*\{[^}]*background: var\(--vd-paper\)/)
-    expect(CSS).toMatch(/body\[data-verdandi-modal-open\] \[data-verdandi-settings\]\s*\{[^}]*opacity: 0[^}]*pointer-events: none/)
   })
 
   it('groups composer statistics into one compact ribbon', () => {

@@ -242,6 +242,15 @@ describe('verdandi compatibility guardrails', () => {
     )
   })
 
+  it('papers the trace detail JSON trees and result blocks like transcript code', () => {
+    expect(CSS).toMatch(
+      /\[data-conversation-composer-overlay\] :is\(\s*\[class\*='_jsonPreview'\],[\s\S]*?\[class\*='_resultBlocks'\][\s\S]*?\)\s*\{[\s\S]*?color-mix\(in srgb, var\(--vd-paper-solid\) 94%, transparent\)/,
+    )
+    expect(CSS).toMatch(
+      /\[data-conversation-composer-overlay\] \[class\*='_resultBlockText'\]\s*\{[\s\S]*?background: transparent !important/,
+    )
+  })
+
   it('groups composer statistics into one compact ribbon', () => {
     expect(CSS).toMatch(/\[data-slot='conversation\.composer\.dock'\]\s*\{[\s\S]*?display: grid !important/)
     expect(CSS).toMatch(/\[data-slot='conversation\.composer\.dock'\]\s*\{[\s\S]*?margin: 3px auto 0[\s\S]*?border-radius: 12px 12px 14px 14px/)

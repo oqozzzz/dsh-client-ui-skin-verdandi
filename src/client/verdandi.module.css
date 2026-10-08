@@ -771,6 +771,27 @@ body[data-dsh-verdandi] [data-verdandi-pane='conversation'][data-verdandi-view='
   background-color: transparent !important;
 }
 
+/* The detail panel's JSON trees and result blocks are code-class content.
+   Their white slabs become paper cards — the same treatment transcript code
+   blocks get — so the host's syntax colors stay readable over the veil
+   instead of over raw scenery. The result `pre` rides transparent inside its
+   already-papered blocks container. */
+body[data-dsh-verdandi] [data-verdandi-pane='conversation'][data-verdandi-view='trace'] [data-conversation-composer-overlay] :is(
+  [class*='_jsonPreview'],
+  [class*='_jsonPayload'],
+  [class*='_schemaTree'],
+  [class*='_resultBlocks']
+) {
+  color: var(--vd-ink);
+  background: color-mix(in srgb, var(--vd-paper-solid) 94%, transparent);
+  border: 1px solid var(--vd-line);
+  border-radius: 10px;
+}
+
+body[data-dsh-verdandi] [data-verdandi-pane='conversation'][data-verdandi-view='trace'] [data-conversation-composer-overlay] [class*='_resultBlockText'] {
+  background: transparent !important;
+}
+
 body[data-dsh-verdandi] [data-verdandi-pane='conversation'] :is(
   [data-slot='conversation'],
   [data-slot='conversation.session'],

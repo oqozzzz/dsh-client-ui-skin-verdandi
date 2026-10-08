@@ -707,17 +707,19 @@ body[data-dsh-verdandi][data-ds-dark-theme] [data-verdandi-pane='conversation'][
 
    These are also the surfaces the settings fog slider drives: 0% lifts every
    fog layer so the artwork shows raw, 100% raises the main fog to 0.94 so the
-   background is all but gone behind the reading surfaces. */
+   background is all but gone behind the reading surfaces — while the outer
+   stops stay lighter (0.55/0.58), keeping the designed edge-fade into the
+   pane on both sides. */
 body[data-dsh-verdandi] [data-verdandi-panel],
 body[data-dsh-verdandi] [data-verdandi-pane='conversation'][data-verdandi-view='trace'] [data-conversation-composer-overlay] {
   color: var(--vd-ink);
   background:
     linear-gradient(
       90deg,
-      color-mix(in srgb, rgba(255, 253, 251, 0.9) calc(var(--vd-veil-strength) * 100%), transparent) 0%,
+      color-mix(in srgb, rgba(255, 253, 251, 0.55) calc(var(--vd-veil-strength) * 100%), transparent) 0%,
       color-mix(in srgb, rgba(255, 253, 251, 0.94) calc(var(--vd-veil-strength) * 100%), transparent) 9%,
       color-mix(in srgb, rgba(255, 253, 251, 0.94) calc(var(--vd-veil-strength) * 100%), transparent) 91%,
-      color-mix(in srgb, rgba(255, 253, 251, 0.9) calc(var(--vd-veil-strength) * 100%), transparent) 100%
+      color-mix(in srgb, rgba(255, 253, 251, 0.55) calc(var(--vd-veil-strength) * 100%), transparent) 100%
     ),
     linear-gradient(
       180deg,
@@ -749,10 +751,10 @@ body[data-dsh-verdandi][data-ds-dark-theme] [data-verdandi-pane='conversation'][
   background:
     linear-gradient(
       90deg,
-      color-mix(in srgb, rgba(18, 11, 15, 0.9) calc(var(--vd-veil-strength) * 100%), transparent) 0%,
+      color-mix(in srgb, rgba(18, 11, 15, 0.58) calc(var(--vd-veil-strength) * 100%), transparent) 0%,
       color-mix(in srgb, rgba(18, 11, 15, 0.94) calc(var(--vd-veil-strength) * 100%), transparent) 9%,
       color-mix(in srgb, rgba(18, 11, 15, 0.94) calc(var(--vd-veil-strength) * 100%), transparent) 91%,
-      color-mix(in srgb, rgba(18, 11, 15, 0.9) calc(var(--vd-veil-strength) * 100%), transparent) 100%
+      color-mix(in srgb, rgba(18, 11, 15, 0.58) calc(var(--vd-veil-strength) * 100%), transparent) 100%
     ),
     linear-gradient(
       180deg,

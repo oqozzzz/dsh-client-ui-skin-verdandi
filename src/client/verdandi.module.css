@@ -754,11 +754,12 @@ body[data-dsh-verdandi][data-ds-dark-theme] [data-verdandi-pane='conversation'][
 }
 
 /* The trace overlay paints its own white slabs on top of the tenant root —
-   the toolbar, the timeline plot, the ledger table, the detail split the
-   event table shares with the 事件详情 aside, the result blocks and the JSON
-   trees. Each goes transparent so the veiled scene shows through the whole
-   view; row hovers, rails, spans and the host's syntax colors keep their own
-   colors over it. */
+   the toolbar, the timeline plot, the ledger table, and the whole 事件详情
+   aside: its body, tab strip, overview dl, section wrappers, scroll regions,
+   schema blocks, JSON trees and result blocks all carry host white, and the
+   white persists through the inner slabs unless the wrapper chain goes
+   transparent with them. Family substrings cover each haSm5q_* group in one
+   entry; status chips, rails, spans and syntax colors keep their own colors. */
 body[data-dsh-verdandi] [data-verdandi-pane='conversation'][data-verdandi-view='trace'] [data-conversation-composer-overlay] :is(
   [role='toolbar'],
   [class*='_plot'],
@@ -767,11 +768,15 @@ body[data-dsh-verdandi] [data-verdandi-pane='conversation'][data-verdandi-view='
   [class*='_table'],
   [class*='_search'],
   [class*='_historyLoadButton'],
-  [class*='_resultBlocks'],
-  [class*='_resultBlockText'],
-  [class*='_jsonPreview'],
-  [class*='_jsonPayload'],
-  [class*='_schemaTree'],
+  [class*='_details'],
+  [class*='_detailTab'],
+  [class*='_detailBody'],
+  [class*='_overview'],
+  [class*='_schema'],
+  [class*='_json'],
+  [class*='_resultBlock'],
+  [class*='_markdownPreview'],
+  [class*='_summaryScrollRegion'],
   [aria-label='事件详情']
 ) {
   background-color: transparent !important;

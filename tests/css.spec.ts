@@ -244,7 +244,7 @@ describe('verdandi compatibility guardrails', () => {
 
   it('lays every trace detail slab on the transparent veil', () => {
     expect(CSS).toMatch(
-      /\[data-conversation-composer-overlay\] :is\([\s\S]*?\[class\*='_resultBlocks'\][\s\S]*?\[class\*='_jsonPreview'\][\s\S]*?\[class\*='_schemaTree'\][\s\S]*?\)\s*\{[\s\S]*?background-color: transparent !important/,
+      /\[data-conversation-composer-overlay\] :is\([\s\S]*?\[class\*='_detailBody'\][\s\S]*?\[class\*='_overview'\][\s\S]*?\[class\*='_json'\][\s\S]*?\[class\*='_resultBlock'\][\s\S]*?\)\s*\{[\s\S]*?background-color: transparent !important/,
     )
     expect(CSS).not.toMatch(
       /\[data-conversation-composer-overlay\][^{}]*\{[^}]*--vd-paper-solid[^}]*94%[^}]*transparent\)/,

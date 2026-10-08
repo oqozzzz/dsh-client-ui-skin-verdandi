@@ -723,7 +723,7 @@ function registerSettingsSection(ctx: Context): () => void {
       h('div', { key: 'row', style: SETTINGS_ROW_STYLE }, [
         h('div', { key: 'text', style: SETTINGS_TEXT_STYLE }, [
           h('div', { key: 'title', style: SETTINGS_TITLE_STYLE }, '雾化浓度'),
-          h('div', { key: 'desc', style: SETTINGS_DESC_STYLE }, '场景画上的纱幕浓度，0% 完全透出画稿。'),
+          h('div', { key: 'desc', style: SETTINGS_DESC_STYLE }, '插件 / 自动化任务 / 轨迹页的背景雾化：0% 完全透出画稿，100% 几乎完全遮住。'),
         ]),
         h('div', { key: 'control', style: SETTINGS_CONTROL_STYLE }, [
           h('input', {

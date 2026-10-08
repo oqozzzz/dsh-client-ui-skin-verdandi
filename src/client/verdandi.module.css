@@ -39,13 +39,13 @@ body[data-dsh-verdandi] {
      light mode it used to be white, which pushed the whole column towards paper
      white and read as an overlay; a warm neutral at a lower alpha darkens
      instead of washing, so the artwork keeps its depth and the reading surfaces
-     stay the brightest thing on screen. Each veil color is the designed alpha
-     scaled by `--vd-veil-strength` (1 = designed fog, 0 = raw scene) — the
-     settings slider writes that one variable and every surface follows. */
+     stay the brightest thing on screen. These chat-side values are FIXED — the
+     settings fog slider only drives the swap surfaces (plugins / automations /
+     trace) through `--vd-veil-strength` below. */
   --vd-veil-strength: 1;
-  --vd-stage-veil: color-mix(in srgb, rgba(255, 253, 251, 0.22) calc(var(--vd-veil-strength) * 100%), transparent);
-  --vd-stage-veil-edge: color-mix(in srgb, rgba(255, 253, 251, 0.08) calc(var(--vd-veil-strength) * 100%), transparent);
-  --vd-stage-veil-hero: color-mix(in srgb, rgba(255, 253, 251, 0.05) calc(var(--vd-veil-strength) * 100%), transparent);
+  --vd-stage-veil: rgba(255, 253, 251, 0.22);
+  --vd-stage-veil-edge: rgba(255, 253, 251, 0.08);
+  --vd-stage-veil-hero: rgba(255, 253, 251, 0.05);
   --dsw-font-family: 'Avenir Next', 'PingFang SC', 'Microsoft YaHei', system-ui, sans-serif;
   --dsw-font-family-code: 'JetBrains Mono', 'Cascadia Code', Consolas, monospace;
   background-color: #f8f2ed;
@@ -77,9 +77,9 @@ body[data-dsh-verdandi][data-ds-dark-theme] {
   --vd-danger: #ff9aa9;
   --vd-warn: #f0cd8a;
   --vd-veil-strength: 1;
-  --vd-stage-veil: color-mix(in srgb, rgba(18, 11, 15, 0.24) calc(var(--vd-veil-strength) * 100%), transparent);
-  --vd-stage-veil-edge: color-mix(in srgb, rgba(18, 11, 15, 0.1) calc(var(--vd-veil-strength) * 100%), transparent);
-  --vd-stage-veil-hero: color-mix(in srgb, rgba(18, 11, 15, 0.06) calc(var(--vd-veil-strength) * 100%), transparent);
+  --vd-stage-veil: rgba(18, 11, 15, 0.24);
+  --vd-stage-veil-edge: rgba(18, 11, 15, 0.1);
+  --vd-stage-veil-hero: rgba(18, 11, 15, 0.06);
   background-color: #171015;
 }
 
@@ -703,19 +703,27 @@ body[data-dsh-verdandi][data-ds-dark-theme] [data-verdandi-pane='conversation'][
    `data-verdandi-view='trace'` state so the chat view never matches. These
    rules carry the scenic background and the ink tokens so the chrome reads
    like the rest of the skin, and deliberately none of the chat surface's
-   overflow clip, positioning or stage, so host scrolling stays native. */
+   overflow clip, positioning or stage, so host scrolling stays native.
+
+   These are also the surfaces the settings fog slider drives: 0% lifts every
+   fog layer so the artwork shows raw, 100% raises the main fog to 0.94 so the
+   background is all but gone behind the reading surfaces. */
 body[data-dsh-verdandi] [data-verdandi-panel],
 body[data-dsh-verdandi] [data-verdandi-pane='conversation'][data-verdandi-view='trace'] [data-conversation-composer-overlay] {
   color: var(--vd-ink);
   background:
     linear-gradient(
       90deg,
-      var(--vd-stage-veil-edge) 0%,
-      rgba(255, 253, 251, 0.6) 9%,
-      rgba(255, 253, 251, 0.6) 91%,
-      var(--vd-stage-veil-edge) 100%
+      color-mix(in srgb, rgba(255, 253, 251, 0.9) calc(var(--vd-veil-strength) * 100%), transparent) 0%,
+      color-mix(in srgb, rgba(255, 253, 251, 0.94) calc(var(--vd-veil-strength) * 100%), transparent) 9%,
+      color-mix(in srgb, rgba(255, 253, 251, 0.94) calc(var(--vd-veil-strength) * 100%), transparent) 91%,
+      color-mix(in srgb, rgba(255, 253, 251, 0.9) calc(var(--vd-veil-strength) * 100%), transparent) 100%
     ),
-    linear-gradient(180deg, rgba(255, 253, 251, 0.14), rgba(248, 242, 237, 0.24)),
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, rgba(255, 253, 251, 0.14) calc(var(--vd-veil-strength) * 100%), transparent),
+      color-mix(in srgb, rgba(248, 242, 237, 0.24) calc(var(--vd-veil-strength) * 100%), transparent)
+    ),
     var(--vd-art-workspace-light) center / cover no-repeat,
     var(--vd-ivory-soft) !important;
   --dsw-alias-label-primary: var(--vd-ink);
@@ -741,12 +749,16 @@ body[data-dsh-verdandi][data-ds-dark-theme] [data-verdandi-pane='conversation'][
   background:
     linear-gradient(
       90deg,
-      var(--vd-stage-veil-edge) 0%,
-      rgba(18, 11, 15, 0.58) 9%,
-      rgba(18, 11, 15, 0.58) 91%,
-      var(--vd-stage-veil-edge) 100%
+      color-mix(in srgb, rgba(18, 11, 15, 0.9) calc(var(--vd-veil-strength) * 100%), transparent) 0%,
+      color-mix(in srgb, rgba(18, 11, 15, 0.94) calc(var(--vd-veil-strength) * 100%), transparent) 9%,
+      color-mix(in srgb, rgba(18, 11, 15, 0.94) calc(var(--vd-veil-strength) * 100%), transparent) 91%,
+      color-mix(in srgb, rgba(18, 11, 15, 0.9) calc(var(--vd-veil-strength) * 100%), transparent) 100%
     ),
-    linear-gradient(180deg, rgba(25, 15, 20, 0.28), rgba(16, 9, 13, 0.48)),
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, rgba(25, 15, 20, 0.28) calc(var(--vd-veil-strength) * 100%), transparent),
+      color-mix(in srgb, rgba(16, 9, 13, 0.48) calc(var(--vd-veil-strength) * 100%), transparent)
+    ),
     var(--vd-art-workspace-dark) center / cover no-repeat,
     #171015 !important;
   --dsw-alias-label-secondary: #d4bbc2;
@@ -1832,13 +1844,10 @@ body[data-dsh-verdandi] [data-verdandi-pane='conversation'] [data-turn-trigger]:
    (crimson in light, gold in dark). Paint only: the marks keep the host's 10px
    hit boxes and the scroller's behaviour. */
 body[data-dsh-verdandi] [data-slot='conversation.view'] nav:has([class*='_marks']) {
-  /* The turn-rail backband scales with the veil strength too: at 0% fog the
-     raw scene shows through the rail exactly like the stage, instead of the
-     fixed band reading as an extra layer of fog the slider cannot remove. */
   background: linear-gradient(
     90deg,
     transparent,
-    color-mix(in srgb, var(--vd-slip) calc(62% * var(--vd-veil-strength)), transparent) 42%
+    color-mix(in srgb, var(--vd-slip) 62%, transparent) 42%
   );
   border-radius: 10px 0 0 10px;
 }
@@ -2071,15 +2080,15 @@ body[data-dsh-verdandi] [data-verdandi-pane='conversation'] [class*='_turnStatus
   }
 
   body[data-dsh-verdandi] [data-verdandi-pane='conversation'] {
-    --vd-stage-veil: color-mix(in srgb, rgba(255, 253, 251, 0.34) calc(var(--vd-veil-strength) * 100%), transparent);
-    --vd-stage-veil-edge: color-mix(in srgb, rgba(255, 253, 251, 0.16) calc(var(--vd-veil-strength) * 100%), transparent);
-    --vd-stage-veil-hero: color-mix(in srgb, rgba(255, 253, 251, 0.12) calc(var(--vd-veil-strength) * 100%), transparent);
+    --vd-stage-veil: rgba(255, 253, 251, 0.34);
+    --vd-stage-veil-edge: rgba(255, 253, 251, 0.16);
+    --vd-stage-veil-hero: rgba(255, 253, 251, 0.12);
   }
 
   body[data-dsh-verdandi][data-ds-dark-theme] [data-verdandi-pane='conversation'] {
-    --vd-stage-veil: color-mix(in srgb, rgba(18, 11, 15, 0.42) calc(var(--vd-veil-strength) * 100%), transparent);
-    --vd-stage-veil-edge: color-mix(in srgb, rgba(18, 11, 15, 0.18) calc(var(--vd-veil-strength) * 100%), transparent);
-    --vd-stage-veil-hero: color-mix(in srgb, rgba(18, 11, 15, 0.3) calc(var(--vd-veil-strength) * 100%), transparent);
+    --vd-stage-veil: rgba(18, 11, 15, 0.42);
+    --vd-stage-veil-edge: rgba(18, 11, 15, 0.18);
+    --vd-stage-veil-hero: rgba(18, 11, 15, 0.3);
   }
 
   body[data-dsh-verdandi] [data-verdandi-pane='conversation'] :is(

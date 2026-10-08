@@ -93,21 +93,16 @@ describe('verdandi compatibility guardrails', () => {
     expect(conversationRule).toContain('--vd-art-workspace-light')
     expect(conversationRule).toMatch(/var\(--vd-stage-veil-edge\) 0%/)
     expect(conversationRule).toMatch(/var\(--vd-stage-veil\) 9%/)
-    // Both palettes carry the veil as a token scaled by the one strength
-    // variable (`--vd-veil-strength`, driven by the settings slider), not as a
-    // hard-coded wash. The light veil is a warm neutral rather than white: a
-    // white wash pushed the column towards paper white and read as an overlay
-    // over the artwork.
-    expect(CSS).toMatch(
-      /--vd-stage-veil: color-mix\(in srgb, rgba\(255, 253, 251, 0\.22\) calc\(var\(--vd-veil-strength\) \* 100%\), transparent\)/,
-    )
-    expect(CSS).toMatch(
-      /--vd-stage-veil: color-mix\(in srgb, rgba\(18, 11, 15, 0\.24\) calc\(var\(--vd-veil-strength\) \* 100%\), transparent\)/,
-    )
+    // Both palettes carry the chat veil as a fixed token — the fog slider does
+    // not touch the chat stage. The light veil is a warm neutral rather than
+    // white: a white wash pushed the column towards paper white and read as an
+    // overlay over the artwork.
+    expect(CSS).toMatch(/--vd-stage-veil: rgba\(255, 253, 251, 0\.22\)/)
+    expect(CSS).toMatch(/--vd-stage-veil: rgba\(18, 11, 15, 0\.24\)/)
     // Lighter than the original wash, which read as an overlay over the artwork,
     // but still light: a darker veil lowers the luminance behind dark ink and
     // therefore lowers its contrast.
-    expect(CSS).not.toMatch(/--vd-stage-veil: color-mix\(in srgb, rgba\(255, 253, 251, 0\.3\)/)
+    expect(CSS).not.toMatch(/--vd-stage-veil: rgba\(255, 253, 251, 0\.3\)/)
     // The empty-session composition is not veiled; there is no text to carry.
     const heroRule = CSS.match(/\[data-verdandi-phase='hero'\]\s*\{([^}]*)\}/)?.[1] ?? ''
     expect(heroRule).toContain('--vd-stage-veil-hero')
@@ -257,11 +252,15 @@ describe('verdandi compatibility guardrails', () => {
     )
   })
 
-  it('scales every veil color from the one strength variable', () => {
-    const matches = CSS.match(/--vd-stage-veil:[^;]*color-mix\(in srgb, [^;]*calc\(var\(--vd-veil-strength\) \* 100%\), transparent\)/g) ?? []
-    // body light, body dark, high-contrast pane light, high-contrast pane dark.
-    expect(matches.length).toBe(4)
-    expect(CSS).toMatch(/--vd-veil-strength: 1/)
+  it('drives only the swap surfaces from the fog strength variable', () => {
+    const matches = CSS.match(/color-mix\(in srgb, rgba\([^)]*\) calc\(var\(--vd-veil-strength\) \* 100%\), transparent\)/g) ?? []
+    // The panel backdrops (plugins / automations / trace), light and dark:
+    // 4 horizontal fog stops + 2 vertical wash stops per palette.
+    expect(matches.length).toBe(12)
+    // The chat stage keeps its fixed designed veil and never consumes the
+    // strength variable.
+    expect(CSS).toMatch(/--vd-stage-veil: rgba\(255, 253, 251, 0\.22\)/)
+    expect(CSS).not.toMatch(/--vd-stage-veil:[^;]*var\(--vd-veil-strength\)/)
   })
 
   it('groups composer statistics into one compact ribbon', () => {
@@ -472,7 +471,7 @@ describe('verdandi compatibility guardrails', () => {
       /@supports not \(\(backdrop-filter: blur\(4px\)\) or \(-webkit-backdrop-filter: blur\(4px\)\)\)[\s\S]*?\[data-clock='start'\][\s\S]*?background: var\(--vd-slip-solid\)/,
     )
     expect(CSS).toMatch(
-      /@media \(prefers-contrast: more\)[\s\S]*?--vd-stage-veil: color-mix\(in srgb, rgba\(255, 253, 251, 0\.34\) calc\(var\(--vd-veil-strength\) \* 100%\), transparent\)/,
+      /@media \(prefers-contrast: more\)[\s\S]*?--vd-stage-veil: rgba\(255, 253, 251, 0\.34\)/,
     )
     expect(CSS).toMatch(/@media \(forced-colors: active\)[\s\S]*?background: Canvas/)
   })

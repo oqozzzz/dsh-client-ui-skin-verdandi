@@ -1,6 +1,6 @@
 # 薇儿丹蒂 · 纯白圣誓
 
-> 《深空之眼》薇儿丹蒂主题的 DeepSeek Harness Web UI 皮肤插件。
+> 《深空之眼》薇儿丹蒂主题的 DeepSeek Harness 皮肤插件，同时适配 0.1.x Web 端与 0.2+ 官方桌面端。
 
 **语言 / Language：** [简体中文](README.md) | [English](README.en.md)
 
@@ -22,6 +22,16 @@
 ![新会话页面（暗色）](preview/hero-dark.png)
 
 ![暗色模式预览](preview/dark.png)
+
+## 桌面端效果
+
+0.2 官方桌面端内嵌同一 Web 客户端，皮肤在桌面端完整生效：顶部装饰自动避开 40 DIP 系统标题栏，插件管理、自动化任务等非聊天面板沿用场景背景与纱幕（不带滚动裁剪），切换会话时人物舞台跨会话复用、立绘不再重新加载闪烁。
+
+![桌面端新会话页（亮色）](preview/desktop-hero-light.png)
+
+![桌面端插件管理页（亮色）](preview/desktop-plugin-light.png)
+
+![桌面端新会话页（暗色）](preview/desktop-hero-dark.png)
 
 ## 安装
 

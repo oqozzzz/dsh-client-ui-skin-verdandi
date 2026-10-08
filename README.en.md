@@ -1,6 +1,6 @@
 # Verdandi · White Vow
 
-> An Aether Gazer Verdandi-themed skin plugin for the DeepSeek Harness Web UI.
+> An Aether Gazer Verdandi-themed skin plugin for DeepSeek Harness, covering both the 0.1.x web shell and the 0.2+ official desktop app.
 
 **Language / 语言:** [简体中文](README.md) | [English](README.en.md)
 
@@ -22,6 +22,16 @@
 ![New-session page (dark)](preview/hero-dark.png)
 
 ![Dark mode preview](preview/dark.png)
+
+## Desktop shell
+
+The 0.2 official desktop app embeds the same web client, and the skin applies in full there: the top ornaments keep clear of the 40 DIP system caption band, the plugin-manager and automation-task panels carry the scenic backdrop and veil without the scroll clip, and the character stage is reused across session switches, so the figures no longer reload or flash.
+
+![Desktop new-session page (light)](preview/desktop-hero-light.png)
+
+![Desktop plugin manager (light)](preview/desktop-plugin-light.png)
+
+![Desktop new-session page (dark)](preview/desktop-hero-dark.png)
 
 ## Installation
 

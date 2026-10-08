@@ -242,12 +242,12 @@ describe('verdandi compatibility guardrails', () => {
     )
   })
 
-  it('papers the trace detail JSON trees and leaves result blocks on the veil', () => {
+  it('lays every trace detail slab on the transparent veil', () => {
     expect(CSS).toMatch(
-      /\[data-conversation-composer-overlay\] :is\(\s*\[class\*='_jsonPreview'\][\s\S]*?\)\s*\{[\s\S]*?color-mix\(in srgb, var\(--vd-paper-solid\) 94%, transparent\)/,
+      /\[data-conversation-composer-overlay\] :is\([\s\S]*?\[class\*='_resultBlocks'\][\s\S]*?\[class\*='_jsonPreview'\][\s\S]*?\[class\*='_schemaTree'\][\s\S]*?\)\s*\{[\s\S]*?background-color: transparent !important/,
     )
-    expect(CSS).toMatch(
-      /\[data-conversation-composer-overlay\] :is\([\s\S]*?\[class\*='_resultBlocks'\][\s\S]*?\)\s*\{[\s\S]*?background-color: transparent !important/,
+    expect(CSS).not.toMatch(
+      /\[data-conversation-composer-overlay\][^{}]*\{[^}]*--vd-paper-solid[^}]*94%[^}]*transparent\)/,
     )
   })
 

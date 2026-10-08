@@ -1,6 +1,22 @@
 import { describe, expect, it, beforeEach, afterEach, vi } from 'vitest'
 import { apply } from '../src/client/index.js'
 
+// jsdom runs without a backing store unless --localstorage-file is provided;
+// the skin treats storage as optional (try/catch), the tests stub it so the
+// persistence path is exercised deterministically.
+if (typeof globalThis.localStorage === 'undefined') {
+  const backing = new Map<string, string>()
+  Object.defineProperty(globalThis, 'localStorage', {
+    value: {
+      getItem: (key: string) => backing.get(key) ?? null,
+      setItem: (key: string, value: string) => void backing.set(key, value),
+      removeItem: (key: string) => void backing.delete(key),
+      clear: () => backing.clear(),
+    },
+    configurable: true,
+  })
+}
+
 class MockContext {
   private disposers: Array<() => void> = []
   constructor(private services: Record<string, unknown> = {}) {}
@@ -353,5 +369,40 @@ describe('verdandi skin on the dsh 0.2 shell', () => {
     expect(document.querySelector('[data-verdandi-panel]')?.className).toBe('host_plugin_page')
     ctx.disposeAll()
     expect(document.querySelector('[data-verdandi-panel]')).toBeNull()
+  })
+
+  it('mounts the settings control with the persisted veil strength', () => {
+    localStorage.setItem('verdandi:veil-strength', '0.4')
+    apply(ctx as never)
+
+    const root = document.querySelector('[data-verdandi-settings]')
+    expect(root).not.toBeNull()
+    const range = root!.querySelector('input[type="range"]') as HTMLInputElement
+    expect(range.min).toBe('0')
+    expect(range.max).toBe('100')
+    expect(range.value).toBe('40')
+    expect(document.body.style.getPropertyValue('--vd-veil-strength')).toBe('0.40')
+  })
+
+  it('moves the veil strength with the slider and remembers it', () => {
+    apply(ctx as never)
+    const range = document.querySelector('[data-verdandi-settings] input[type="range"]') as HTMLInputElement
+    range.value = '0'
+    range.dispatchEvent(new Event('input'))
+
+    expect(document.body.style.getPropertyValue('--vd-veil-strength')).toBe('0.00')
+    expect(localStorage.getItem('verdandi:veil-strength')).toBe('0')
+    expect(range.value).toBe('0')
+  })
+
+  it('removes the settings control and restores the prior veil variable on dispose', () => {
+    document.body.style.setProperty('--vd-veil-strength', '0.55')
+    apply(ctx as never)
+    expect(document.querySelector('[data-verdandi-settings]')).not.toBeNull()
+
+    ctx.disposeAll()
+    expect(document.querySelector('[data-verdandi-settings]')).toBeNull()
+    expect(document.body.style.getPropertyValue('--vd-veil-strength')).toBe('0.55')
+    localStorage.removeItem('verdandi:veil-strength')
   })
 })

@@ -93,15 +93,21 @@ describe('verdandi compatibility guardrails', () => {
     expect(conversationRule).toContain('--vd-art-workspace-light')
     expect(conversationRule).toMatch(/var\(--vd-stage-veil-edge\) 0%/)
     expect(conversationRule).toMatch(/var\(--vd-stage-veil\) 9%/)
-    // Both palettes carry the veil as a token, not as a hard-coded wash. The
-    // light veil is a warm neutral rather than white: a white wash pushed the
-    // column towards paper white and read as an overlay over the artwork.
-    expect(CSS).toMatch(/--vd-stage-veil: rgba\(255, 253, 251, 0\.22\)/)
-    expect(CSS).toMatch(/--vd-stage-veil: rgba\(18, 11, 15, 0\.24\)/)
+    // Both palettes carry the veil as a token scaled by the one strength
+    // variable (`--vd-veil-strength`, driven by the settings slider), not as a
+    // hard-coded wash. The light veil is a warm neutral rather than white: a
+    // white wash pushed the column towards paper white and read as an overlay
+    // over the artwork.
+    expect(CSS).toMatch(
+      /--vd-stage-veil: color-mix\(in srgb, rgba\(255, 253, 251, 0\.22\) calc\(var\(--vd-veil-strength\) \* 100%\), transparent\)/,
+    )
+    expect(CSS).toMatch(
+      /--vd-stage-veil: color-mix\(in srgb, rgba\(18, 11, 15, 0\.24\) calc\(var\(--vd-veil-strength\) \* 100%\), transparent\)/,
+    )
     // Lighter than the original wash, which read as an overlay over the artwork,
     // but still light: a darker veil lowers the luminance behind dark ink and
     // therefore lowers its contrast.
-    expect(CSS).not.toMatch(/--vd-stage-veil: rgba\(255, 253, 251, 0\.3\)/)
+    expect(CSS).not.toMatch(/--vd-stage-veil: color-mix\(in srgb, rgba\(255, 253, 251, 0\.3\)/)
     // The empty-session composition is not veiled; there is no text to carry.
     const heroRule = CSS.match(/\[data-verdandi-phase='hero'\]\s*\{([^}]*)\}/)?.[1] ?? ''
     expect(heroRule).toContain('--vd-stage-veil-hero')
@@ -249,6 +255,18 @@ describe('verdandi compatibility guardrails', () => {
     expect(CSS).not.toMatch(
       /\[data-conversation-composer-overlay\][^{}]*\{[^}]*--vd-paper-solid[^}]*94%[^}]*transparent\)/,
     )
+  })
+
+  it('scales every veil color from the one strength variable', () => {
+    const matches = CSS.match(/--vd-stage-veil:[^;]*color-mix\(in srgb, [^;]*calc\(var\(--vd-veil-strength\) \* 100%\), transparent\)/g) ?? []
+    // body light, body dark, desktop pane light, desktop pane dark.
+    expect(matches.length).toBe(4)
+    expect(CSS).toMatch(/--vd-veil-strength: 1/)
+  })
+
+  it('owns a settings control that steps aside while a modal is open', () => {
+    expect(CSS).toMatch(/\[data-verdandi-settings\] \.settingsPanel\s*\{[^}]*background: var\(--vd-paper\)/)
+    expect(CSS).toMatch(/body\[data-verdandi-modal-open\] \[data-verdandi-settings\]\s*\{[^}]*opacity: 0[^}]*pointer-events: none/)
   })
 
   it('groups composer statistics into one compact ribbon', () => {
@@ -458,7 +476,9 @@ describe('verdandi compatibility guardrails', () => {
     expect(CSS).toMatch(
       /@supports not \(\(backdrop-filter: blur\(4px\)\) or \(-webkit-backdrop-filter: blur\(4px\)\)\)[\s\S]*?\[data-clock='start'\][\s\S]*?background: var\(--vd-slip-solid\)/,
     )
-    expect(CSS).toMatch(/@media \(prefers-contrast: more\)[\s\S]*?--vd-stage-veil: rgba\(255, 253, 251, 0\.34\)/)
+    expect(CSS).toMatch(
+      /@media \(prefers-contrast: more\)[\s\S]*?--vd-stage-veil: color-mix\(in srgb, rgba\(255, 253, 251, 0\.34\) calc\(var\(--vd-veil-strength\) \* 100%\), transparent\)/,
+    )
     expect(CSS).toMatch(/@media \(forced-colors: active\)[\s\S]*?background: Canvas/)
   })
 })

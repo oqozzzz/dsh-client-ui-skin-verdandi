@@ -39,10 +39,13 @@ body[data-dsh-verdandi] {
      light mode it used to be white, which pushed the whole column towards paper
      white and read as an overlay; a warm neutral at a lower alpha darkens
      instead of washing, so the artwork keeps its depth and the reading surfaces
-     stay the brightest thing on screen. */
-  --vd-stage-veil: rgba(255, 253, 251, 0.22);
-  --vd-stage-veil-edge: rgba(255, 253, 251, 0.08);
-  --vd-stage-veil-hero: rgba(255, 253, 251, 0.05);
+     stay the brightest thing on screen. Each veil color is the designed alpha
+     scaled by `--vd-veil-strength` (1 = designed fog, 0 = raw scene) — the
+     settings slider writes that one variable and every surface follows. */
+  --vd-veil-strength: 1;
+  --vd-stage-veil: color-mix(in srgb, rgba(255, 253, 251, 0.22) calc(var(--vd-veil-strength) * 100%), transparent);
+  --vd-stage-veil-edge: color-mix(in srgb, rgba(255, 253, 251, 0.08) calc(var(--vd-veil-strength) * 100%), transparent);
+  --vd-stage-veil-hero: color-mix(in srgb, rgba(255, 253, 251, 0.05) calc(var(--vd-veil-strength) * 100%), transparent);
   --dsw-font-family: 'Avenir Next', 'PingFang SC', 'Microsoft YaHei', system-ui, sans-serif;
   --dsw-font-family-code: 'JetBrains Mono', 'Cascadia Code', Consolas, monospace;
   background-color: #f8f2ed;
@@ -73,9 +76,10 @@ body[data-dsh-verdandi][data-ds-dark-theme] {
   --vd-bare-ink: #fbf3f5;
   --vd-danger: #ff9aa9;
   --vd-warn: #f0cd8a;
-  --vd-stage-veil: rgba(18, 11, 15, 0.24);
-  --vd-stage-veil-edge: rgba(18, 11, 15, 0.1);
-  --vd-stage-veil-hero: rgba(18, 11, 15, 0.06);
+  --vd-veil-strength: 1;
+  --vd-stage-veil: color-mix(in srgb, rgba(18, 11, 15, 0.24) calc(var(--vd-veil-strength) * 100%), transparent);
+  --vd-stage-veil-edge: color-mix(in srgb, rgba(18, 11, 15, 0.1) calc(var(--vd-veil-strength) * 100%), transparent);
+  --vd-stage-veil-hero: color-mix(in srgb, rgba(18, 11, 15, 0.06) calc(var(--vd-veil-strength) * 100%), transparent);
   background-color: #171015;
 }
 
@@ -324,6 +328,97 @@ body[data-dsh-verdandi][data-verdandi-modal-open] [data-verdandi-pane='sidebar']
   z-index: 1000;
   isolation: auto;
   overflow: visible;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Skin settings — a small owned control, not a host surface. One slider today */
+/* (veil strength 0-100%); the panel is paper over the scene and steps aside   */
+/* while a modal is open.                                                      */
+[data-verdandi-settings] {
+  position: fixed;
+  left: 12px;
+  bottom: 12px;
+  z-index: 40;
+  font-family: var(--dsw-font-family);
+}
+
+[data-verdandi-settings] .settingsToggle {
+  display: block;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  color: var(--vd-gold-light);
+  background: linear-gradient(160deg, var(--vd-crimson), var(--vd-crimson-deep));
+  border: 1px solid var(--vd-gold);
+  border-radius: 50%;
+  box-shadow: var(--vd-shadow), inset 0 0 0 1px rgba(255, 253, 251, 0.35);
+  cursor: pointer;
+  opacity: 0.78;
+  transition: opacity 160ms ease, transform 180ms ease;
+}
+
+[data-verdandi-settings] .settingsToggle:hover {
+  opacity: 1;
+  transform: translateY(-1px);
+}
+
+[data-verdandi-settings] .settingsPanel {
+  display: none;
+  position: absolute;
+  left: 0;
+  bottom: 40px;
+  width: 238px;
+  padding: 12px 14px 11px;
+  color: var(--vd-ink);
+  background: var(--vd-paper);
+  border: 1px solid var(--vd-line-strong);
+  border-radius: 12px;
+  box-shadow: var(--vd-shadow);
+}
+
+[data-verdandi-settings] .settingsPanel[data-open] {
+  display: block;
+}
+
+[data-verdandi-settings] .settingsTitle {
+  margin: 0;
+  color: var(--vd-ink);
+  font: 600 12px/1.3 var(--dsw-font-family);
+  letter-spacing: 0.08em;
+}
+
+[data-verdandi-settings] .settingsRow {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 8px;
+  align-items: center;
+  margin-top: 9px;
+  font-size: 12px;
+}
+
+[data-verdandi-settings] .settingsRange {
+  width: 100%;
+  margin: 0;
+  accent-color: var(--vd-crimson);
+}
+
+[data-verdandi-settings] .settingsValue {
+  min-width: 38px;
+  color: var(--vd-ink-muted);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+[data-verdandi-settings] .settingsHint {
+  margin: 8px 0 0;
+  color: var(--vd-ink-muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+body[data-verdandi-modal-open] [data-verdandi-settings] {
+  opacity: 0;
+  pointer-events: none;
 }
 
 body[data-dsh-verdandi] [data-verdandi-pane='sidebar'] button:not(
@@ -2064,15 +2159,15 @@ body[data-dsh-verdandi] [data-verdandi-pane='conversation'] [class*='_turnStatus
   }
 
   body[data-dsh-verdandi] [data-verdandi-pane='conversation'] {
-    --vd-stage-veil: rgba(255, 253, 251, 0.34);
-    --vd-stage-veil-edge: rgba(255, 253, 251, 0.16);
-    --vd-stage-veil-hero: rgba(255, 253, 251, 0.12);
+    --vd-stage-veil: color-mix(in srgb, rgba(255, 253, 251, 0.34) calc(var(--vd-veil-strength) * 100%), transparent);
+    --vd-stage-veil-edge: color-mix(in srgb, rgba(255, 253, 251, 0.16) calc(var(--vd-veil-strength) * 100%), transparent);
+    --vd-stage-veil-hero: color-mix(in srgb, rgba(255, 253, 251, 0.12) calc(var(--vd-veil-strength) * 100%), transparent);
   }
 
   body[data-dsh-verdandi][data-ds-dark-theme] [data-verdandi-pane='conversation'] {
-    --vd-stage-veil: rgba(18, 11, 15, 0.42);
-    --vd-stage-veil-edge: rgba(18, 11, 15, 0.18);
-    --vd-stage-veil-hero: rgba(18, 11, 15, 0.3);
+    --vd-stage-veil: color-mix(in srgb, rgba(18, 11, 15, 0.42) calc(var(--vd-veil-strength) * 100%), transparent);
+    --vd-stage-veil-edge: color-mix(in srgb, rgba(18, 11, 15, 0.18) calc(var(--vd-veil-strength) * 100%), transparent);
+    --vd-stage-veil-hero: color-mix(in srgb, rgba(18, 11, 15, 0.3) calc(var(--vd-veil-strength) * 100%), transparent);
   }
 
   body[data-dsh-verdandi] [data-verdandi-pane='conversation'] :is(

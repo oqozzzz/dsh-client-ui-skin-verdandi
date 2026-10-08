@@ -106,6 +106,13 @@ const STAGE_SELECTOR = '[data-verdandi-stage]'
 const DECORATION_SELECTOR = '[data-verdandi-decoration]'
 const LEGACY_SELECTOR = '[data-verdandi-sidebar-card], [data-verdandi-wedding], [data-verdandi-chrome]'
 const THEME_SOURCE = '@hjbztlbr/dsh-client-ui-skin-verdandi'
+/**
+ * Skin-owned settings control: a fixed gear button with a paper panel. Not a
+ * decoration (it is interactive and must not inherit the aria-hidden treatment),
+ * so it carries its own attribute and its own dispose path.
+ */
+const SETTINGS_ATTR = 'data-verdandi-settings'
+const VEIL_STORAGE_KEY = 'verdandi:veil-strength'
 const OWNED_HOOKS = [
   'data-verdandi-header',
   'data-verdandi-new-session',
@@ -597,6 +604,115 @@ function restoreAttribute(element: HTMLElement, name: string, previous: string |
   else element.setAttribute(name, previous)
 }
 
+/** Persisted veil strength, clamped to 0–1; 1 (the designed fog) on any doubt. */
+function readVeilStrength(): number {
+  try {
+    const raw = localStorage.getItem(VEIL_STORAGE_KEY)
+    if (raw === null) return 1
+    const value = Number(raw)
+    if (!Number.isFinite(value)) return 1
+    return Math.min(1, Math.max(0, value))
+  } catch {
+    return 1
+  }
+}
+
+function applyVeilStrength(body: HTMLElement, strength: number): void {
+  const scaled = strength.toFixed(2)
+  if (body.style.getPropertyValue('--vd-veil-strength') !== scaled) {
+    body.style.setProperty('--vd-veil-strength', scaled)
+  }
+}
+
+/**
+ * Mount the skin's settings control once and wire its behavior. Returns the
+ * teardown: listener removal and the node itself, so dispose leaves no control
+ * and no live handler behind. The slider drives `--vd-veil-strength` (0–1) on
+ * the body inline style — the stylesheet scales every veil color from it — and
+ * persists through localStorage for the next session.
+ */
+function ensureSettingsControl(body: HTMLElement): () => void {
+  const existing = document.querySelector<HTMLElement>(`[${SETTINGS_ATTR}]`)
+  if (existing) existing.remove()
+
+  const root = document.createElement('div')
+  root.setAttribute(SETTINGS_ATTR, '')
+
+  const toggle = document.createElement('button')
+  toggle.type = 'button'
+  toggle.className = css.settingsToggle ?? 'verdandiSettingsToggle'
+  toggle.setAttribute('aria-label', 'Verdandi 皮肤设置')
+  toggle.setAttribute('aria-expanded', 'false')
+
+  const panel = document.createElement('div')
+  panel.className = css.settingsPanel ?? 'verdandiSettingsPanel'
+
+  const title = document.createElement('div')
+  title.className = css.settingsTitle ?? 'verdandiSettingsTitle'
+  title.textContent = 'Verdandi 设置'
+
+  const row = document.createElement('label')
+  row.className = css.settingsRow ?? 'verdandiSettingsRow'
+
+  const label = document.createElement('span')
+  label.textContent = '雾化'
+
+  const range = document.createElement('input')
+  range.type = 'range'
+  range.className = css.settingsRange ?? 'verdandiSettingsRange'
+  range.min = '0'
+  range.max = '100'
+  range.step = '1'
+  range.setAttribute('aria-label', '雾化浓度')
+
+  const value = document.createElement('span')
+  value.className = css.settingsValue ?? 'verdandiSettingsValue'
+
+  const hint = document.createElement('p')
+  hint.className = css.settingsHint ?? 'verdandiSettingsHint'
+  hint.textContent = '场景画上的纱幕浓度，0% 完全透出画稿；即时生效并记住。'
+
+  row.append(label, range, value)
+  panel.append(title, row, hint)
+  root.append(toggle, panel)
+  body.append(root)
+
+  const strength = readVeilStrength()
+  applyVeilStrength(body, strength)
+  range.value = String(Math.round(strength * 100))
+  value.textContent = `${Math.round(strength * 100)}%`
+
+  const setOpen = (open: boolean) => {
+    if (open) panel.setAttribute('data-open', '')
+    else panel.removeAttribute('data-open')
+    toggle.setAttribute('aria-expanded', String(open))
+  }
+  const onToggle = () => setOpen(panel.getAttribute('data-open') === null)
+  const onRange = () => {
+    const percent = Math.round(Number(range.value))
+    applyVeilStrength(body, percent / 100)
+    value.textContent = `${percent}%`
+    try {
+      localStorage.setItem(VEIL_STORAGE_KEY, String(percent / 100))
+    } catch {
+      /* storage unavailable: the setting just won't survive a reload */
+    }
+  }
+  const onOutside = (event: MouseEvent) => {
+    if (!root.contains(event.target as Node)) setOpen(false)
+  }
+  toggle.addEventListener('click', onToggle)
+  range.addEventListener('input', onRange)
+  document.addEventListener('click', onOutside)
+
+  return () => {
+    toggle.removeEventListener('click', onToggle)
+    range.removeEventListener('input', onRange)
+    document.removeEventListener('click', onOutside)
+    root.remove()
+  }
+}
+
 export function apply(ctx: Context): void {
   const body = document.body
   const theme = ctx.get('theme') as ThemeRuntimeLike | undefined
@@ -621,6 +737,8 @@ export function apply(ctx: Context): void {
     })
     body.style.setProperty(property, `url(${JSON.stringify(asset)})`)
   }
+  const previousVeilStrength = body.style.getPropertyValue('--vd-veil-strength')
+  const disposeSettings = ensureSettingsControl(body)
   body.setAttribute(SKIN_ATTR, '')
   removeLegacyNodes()
 
@@ -744,6 +862,9 @@ export function apply(ctx: Context): void {
     if (animationFrame) cancelFrame(animationFrame)
     window.removeEventListener('resize', scheduleSync)
     window.visualViewport?.removeEventListener('resize', scheduleSync)
+    disposeSettings()
+    if (previousVeilStrength) body.style.setProperty('--vd-veil-strength', previousVeilStrength)
+    else body.style.removeProperty('--vd-veil-strength')
 
     // Pane-owned inline state goes first: the loop keys on the skin attribute
     // and clearOwnedHooks below strips it.

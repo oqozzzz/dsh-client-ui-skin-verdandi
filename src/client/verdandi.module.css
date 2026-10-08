@@ -777,6 +777,8 @@ body[data-dsh-verdandi] [data-verdandi-pane='conversation'][data-verdandi-view='
   [class*='_resultBlock'],
   [class*='_markdownPreview'],
   [class*='_summaryScrollRegion'],
+  [data-variant='think'],
+  [class*='thinkBody'],
   [aria-label='事件详情']
 ) {
   background-color: transparent !important;

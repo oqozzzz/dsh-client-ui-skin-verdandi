@@ -754,10 +754,10 @@ body[data-dsh-verdandi][data-ds-dark-theme] [data-verdandi-pane='conversation'][
 }
 
 /* The trace overlay paints its own white slabs on top of the tenant root —
-   the toolbar, the timeline plot, the ledger table, and the detail split the
-   event table shares with the 事件详情 aside. Each goes transparent so the
-   veiled scene shows through the whole view; row hovers, rails and spans keep
-   their own host colors over it. */
+   the toolbar, the timeline plot, the ledger table, the detail split the
+   event table shares with the 事件详情 aside, and the result blocks. Each
+   goes transparent so the veiled scene shows through the whole view; row
+   hovers, rails and spans keep their own host colors over it. */
 body[data-dsh-verdandi] [data-verdandi-pane='conversation'][data-verdandi-view='trace'] [data-conversation-composer-overlay] :is(
   [role='toolbar'],
   [class*='_plot'],
@@ -766,30 +766,28 @@ body[data-dsh-verdandi] [data-verdandi-pane='conversation'][data-verdandi-view='
   [class*='_table'],
   [class*='_search'],
   [class*='_historyLoadButton'],
+  [class*='_resultBlocks'],
+  [class*='_resultBlockText'],
   [aria-label='事件详情']
 ) {
   background-color: transparent !important;
 }
 
-/* The detail panel's JSON trees and result blocks are code-class content.
-   Their white slabs become paper cards — the same treatment transcript code
-   blocks get — so the host's syntax colors stay readable over the veil
-   instead of over raw scenery. The result `pre` rides transparent inside its
-   already-papered blocks container. */
+/* The detail panel's JSON trees are code-class content. Their white slabs
+   become paper cards — the same treatment transcript code blocks get — so
+   the host's syntax colors stay readable over the veil instead of over raw
+   scenery. Result blocks stay on the transparent veil above: they are plain
+   text, and a paper card inside the already-veiled panel read as a second
+   skin stacked over the first. */
 body[data-dsh-verdandi] [data-verdandi-pane='conversation'][data-verdandi-view='trace'] [data-conversation-composer-overlay] :is(
   [class*='_jsonPreview'],
   [class*='_jsonPayload'],
-  [class*='_schemaTree'],
-  [class*='_resultBlocks']
+  [class*='_schemaTree']
 ) {
   color: var(--vd-ink);
   background: color-mix(in srgb, var(--vd-paper-solid) 94%, transparent);
   border: 1px solid var(--vd-line);
   border-radius: 10px;
-}
-
-body[data-dsh-verdandi] [data-verdandi-pane='conversation'][data-verdandi-view='trace'] [data-conversation-composer-overlay] [class*='_resultBlockText'] {
-  background: transparent !important;
 }
 
 body[data-dsh-verdandi] [data-verdandi-pane='conversation'] :is(

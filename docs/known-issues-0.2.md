@@ -305,10 +305,10 @@ contents）下换入 `hGyLPq_root`（带宿主语义锚 `data-conversation-compo
 2. 内层白底板（工具栏/概览/表格/搜索/加载按钮/事件详情 aside）一律
    `background-color: transparent !important`，纱幕透出全视图；行悬停、轮次
    轨道条、时序彩条保留宿主自身颜色
-3. 详情面板的 JSON 树（`_jsonPreview` / `_jsonPayload` / `_schemaTree`）与
-   结果块（`_resultBlocks`，内层 `_resultBlockText` 透明）是代码类内容，
-   走对话区 codeBlock 同款纸面卡（`--vd-paper-solid` 94% 纸面 + 描边圆角），
-   宿主语法高亮色保留在纸面上
+3. 详情面板的 JSON 树（`_jsonPreview` / `_jsonPayload` / `_schemaTree`）是
+   代码类内容，走对话区 codeBlock 同款纸面卡（`--vd-paper-solid` 94% 纸面 +
+   描边圆角），宿主语法高亮色保留在纸面上；结果块（`_resultBlocks` /
+   `_resultBlockText`）是纯文本，改透明纱幕（实测纸面卡叠在纱幕上呈双层皮）
 4. 轨迹视图下 `.characterFigure`（左右立绘）`display: none !important`——藏
    figure 而非 stage（`setStageWidth` 给 stage 打了 inline `!important` 的
    display，藏 stage 会被顶掉）
